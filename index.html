@@ -3,11 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SKALA — Vue Team Gallery</title>
-    <meta name="description" content="SKALA Vue 팀의 결과물 모음" />
+    <title>SKALA · 6반 1조 — Vue 결과물</title>
+    <meta name="description" content="SKALA Vue.js 과정 6반 1조가 각자 만든 화면 모음" />
     <link rel="icon" href="data:," />
-    <script type="module" crossorigin src="/6class-1group/assets/index-D8EjqdKT.js"></script>
-    <link rel="stylesheet" crossorigin href="/6class-1group/assets/index-Dxn05n5Z.css">
+
+    <!--
+      글자는 두 종류만 쓴다.
+      본문은 Helvetica 한 크기로 눌러 두고, 이름표 한 곳에서만 세리프를 쓴다.
+      한 군데서만 쓰기 때문에 그 한 줄이 눈에 걸린다.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <!-- 첫 칠에서 색이 번쩍이지 않도록, 화면이 그려지기 전에 밝기를 정해 둔다 -->
+    <script>
+      document.documentElement.dataset.theme =
+        localStorage.getItem('gallery-theme') ??
+        (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    </script>
+    <script type="module" crossorigin src="/6class-1group/assets/index-nX3SYEtJ.js"></script>
+    <link rel="modulepreload" crossorigin href="/6class-1group/assets/_plugin-vue_export-helper-B7Dh-Sk2.js">
+    <link rel="modulepreload" crossorigin href="/6class-1group/assets/useApi-CROJJdhE-CulSI6oY.js">
+    <link rel="stylesheet" crossorigin href="/6class-1group/assets/index-CnKyw1ZQ.css">
   </head>
   <body>
     <div id="app"></div>

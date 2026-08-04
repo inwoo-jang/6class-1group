@@ -1,0 +1,1 @@
+var e=`/6class-1group/assets/overcast-BLQLiv21.jpg`;export{e as default};
