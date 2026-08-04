@@ -19,6 +19,10 @@ export default defineConfig(({ command }) => ({
      * 서버는 `npm run api` 로 따로 띄운다.
      */
     proxy: {
+      '^/api/dongyeol(?:/|$)': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
       '^/api/(auth|fortune-records|health|reset)': {
         target: 'http://localhost:3001',
         changeOrigin: true,

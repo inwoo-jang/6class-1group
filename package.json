@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "api": "node mock-api/server.js",
+    "test": "node --test",
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "VITE_OPENWEATHER_API_KEY= npm run build && cp dist/index.html dist/404.html && touch dist/.nojekyll && npx --yes gh-pages@6 -d dist -b gh-pages --dotfiles -m \"deploy\""
