@@ -1,0 +1,1 @@
+import{l as e,ut as t}from"./runtime-core.esm-bundler-36cGDk4R.js";import{n}from"./pinia-CZkmeFT3.js";var r=n(`dongyeol-config`,()=>{let n=t(`celsius`);return{unit:n,unitSymbol:e(()=>n.value===`celsius`?`℃`:`℉`),toggleUnit:()=>{n.value=n.value===`celsius`?`fahrenheit`:`celsius`}}});export{r as t};
