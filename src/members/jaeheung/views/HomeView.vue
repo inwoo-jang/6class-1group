@@ -168,7 +168,10 @@ const handleAddCity = async (result) => {
 </script>
 
 <template>
-  <div class="card-panel">
+  <h1 class="page-title">날씨 알려주는 까치</h1>
+
+  <div class="page-layout">
+    <div class="card-panel">
     <p class="panel-title">
       🌤️ 날씨 대시보드 <span class="live-dot" title="Axios + OpenWeatherMap 실시간 연동"></span>
     </p>
@@ -251,29 +254,23 @@ const handleAddCity = async (result) => {
     </BaseDashboardCard>
 
     <BaseDashboardCard title="📍 지역별 날씨 현황">
-      <div class="weather-list-row">
-        <div class="weather-list-col">
-          <div v-if="loading" class="loading">날씨 불러오는 중...</div>
+      <div v-if="loading" class="loading">날씨 불러오는 중...</div>
 
-          <TransitionGroup v-else name="card-list" tag="div" class="card-list">
-            <WeatherCardStore
-              v-for="city in sortedList"
-              :key="city.id"
-              :city="city"
-              :is-selected="selectedCityInfo?.id === city.id"
-              @select-card="selectCity"
-              @click-detail="showDetail"
-              @remove="handleRemove"
-            />
-          </TransitionGroup>
+      <TransitionGroup v-else name="card-list" tag="div" class="card-list">
+        <WeatherCardStore
+          v-for="city in sortedList"
+          :key="city.id"
+          :city="city"
+          :is-selected="selectedCityInfo?.id === city.id"
+          @select-card="selectCity"
+          @click-detail="showDetail"
+          @remove="handleRemove"
+        />
+      </TransitionGroup>
 
-          <p v-if="!loading && sortedList.length === 0" class="empty">
-            '{{ searchQuery }}' 검색 결과와 일치하는 도시가 없습니다.
-          </p>
-        </div>
-
-        <MagpieNest v-if="!loading" class="nest-col" :city="nestCity" />
-      </div>
+      <p v-if="!loading && sortedList.length === 0" class="empty">
+        '{{ searchQuery }}' 검색 결과와 일치하는 도시가 없습니다.
+      </p>
     </BaseDashboardCard>
 
     <BaseDashboardCard title="🗺️ 지도로 보기" v-if="!loading">
@@ -285,17 +282,47 @@ const handleAddCity = async (result) => {
     </BaseDashboardCard>
 
     <div class="status-bar">{{ statusMessage }}</div>
+    </div>
+
+    <MagpieNest v-if="!loading" size="large" floating :city="nestCity" />
   </div>
 </template>
 
 <style scoped>
+.page-title {
+  width: 100%;
+  margin: 0 0 28px;
+  text-align: center;
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: var(--color-heading);
+  box-sizing: border-box;
+}
+
+.page-layout {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  /* 우측 상단에 고정된(floating) 까치 둥지(260px + 여백)와 겹치지 않도록 공간을 남겨두고
+     그 안에서 가운데 정렬한다 */
+  padding-right: 300px;
+  box-sizing: border-box;
+}
+@media (max-width: 1000px) {
+  .page-layout {
+    padding-right: 0;
+  }
+}
+
 .card-panel {
   position: relative;
   overflow: hidden;
   background: var(--color-background-soft);
   border: 1px solid var(--color-border);
   width: 100%;
-  max-width: 760px;
+  max-width: 800px;
   border-radius: 18px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   padding: 28px;
@@ -506,36 +533,6 @@ const handleAddCity = async (result) => {
   color: var(--color-text);
   opacity: 0.7;
   font-size: 14px;
-}
-
-.weather-list-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-}
-.weather-list-col {
-  flex: 1;
-  min-width: 0;
-}
-.nest-col {
-  flex: 0 0 150px;
-  position: sticky;
-  top: 8px;
-  padding: 10px 6px;
-  border-radius: 14px;
-  background: var(--color-background-mute);
-}
-@media (max-width: 560px) {
-  .weather-list-row {
-    flex-direction: column;
-  }
-  .nest-col {
-    flex: none;
-    width: 100%;
-    max-width: 200px;
-    align-self: center;
-    position: static;
-  }
 }
 
 .card-list {

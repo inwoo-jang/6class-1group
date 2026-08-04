@@ -1,9 +1,11 @@
 <script setup>
 /* 상세 기상관측 화면. /m/jaeheung/weather/:cityId 로 들어온다. */
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useOpenWeatherCities } from '../composables/useOpenWeatherCities'
+import { fetchAirQuality, gradePm10 } from '../composables/useOpenWeatherApi'
 import { useConfigStore } from '../composables/useConfigState'
+import MagpieNest from '../components/MagpieNest.vue'
 import { link } from '../routes'
 
 const route = useRoute()
@@ -16,6 +18,30 @@ onMounted(loadCities)
 
 const city = computed(() => cities.value.find((c) => c.id === route.params.cityId) ?? null)
 const notFound = computed(() => loaded.value && !loading.value && !city.value)
+
+/* ── 미세먼지(대기질) — 도시가 확정되면 위/경도로 한 번 조회한다 ── */
+const airQuality = ref(null)
+const airLoading = ref(false)
+const airError = ref(false)
+
+watch(
+  city,
+  async (target) => {
+    if (!target || target.lat === undefined || target.lon === undefined) return
+    airLoading.value = true
+    airError.value = false
+    try {
+      airQuality.value = await fetchAirQuality(target.lat, target.lon)
+    } catch {
+      airError.value = true
+    } finally {
+      airLoading.value = false
+    }
+  },
+  { immediate: true },
+)
+
+const dustGrade = computed(() => gradePm10(airQuality.value?.pm10 ?? null))
 
 const toDisplayTemp = (rawTemp) => {
   if (rawTemp === null || rawTemp === undefined) return null
@@ -70,6 +96,28 @@ const goHome = () => {
           <span class="detail-label">도시 코드</span>
           <span class="detail-value">{{ city.id }}</span>
         </div>
+        <div class="detail-item">
+          <span class="detail-label">미세먼지 (PM10)</span>
+          <span class="detail-value">
+            <template v-if="airLoading">조회 중...</template>
+            <template v-else-if="airQuality?.pm10 != null">
+              {{ airQuality.pm10 }}㎍/㎥ ({{ dustGrade }})
+            </template>
+            <template v-else>정보 없음</template>
+          </span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">초미세먼지 (PM2.5)</span>
+          <span class="detail-value">
+            <template v-if="airLoading">조회 중...</template>
+            <template v-else-if="airQuality?.pm2_5 != null">{{ airQuality.pm2_5 }}㎍/㎥</template>
+            <template v-else>정보 없음</template>
+          </span>
+        </div>
+      </div>
+
+      <div v-if="city.temp !== null" class="nest-wrap">
+        <MagpieNest size="large" :city="city" :dust-grade="dustGrade" />
       </div>
     </template>
 
@@ -167,6 +215,14 @@ const goHome = () => {
   border-radius: 10px;
   padding: 16px;
   margin-bottom: 24px;
+}
+.nest-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+.nest-wrap :deep(.magpie-nest) {
+  max-width: 260px;
 }
 .back-btn {
   width: 100%;
