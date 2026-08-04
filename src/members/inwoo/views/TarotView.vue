@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
 import { cardBack, tarotCards } from '../data/tarotCards'
-import { READINGS, READING_TYPES, buildReading } from '../data/tarotReading'
+import { READINGS, READING_TYPES, buildReading, composeReading } from '../data/tarotReading'
 import { useAuthStore } from '../stores/authStore'
 import { useRecordStore } from '../stores/recordStore'
 import { link } from '../routes'
@@ -120,6 +120,15 @@ onBeforeUnmount(() => window.clearTimeout(shuffleTimer))
  * 카드마다 가진 뜻을 놓인 자리(흐름 · 변수 · 조언)에 맞춰 엮는다.
  * 기다릴 것도, 실패할 것도 없어서 상태를 따로 들고 있지 않는다.
  */
+/**
+ * 화면에 뿌릴 조각 — 자리 제목 · 카드 이름 · 본문이 따로 온다.
+ * 제목에 색을, 카드 이름에 굵기를 주려면 통짜 문자열로는 안 되기 때문이다.
+ */
+const reading = computed(() =>
+  isComplete.value ? composeReading(activeType.value, picks.value) : null,
+)
+
+/** 서버에 남길 때 쓰는 통짜 글 (화면과 같은 내용) */
 const readingText = computed(() =>
   isComplete.value ? buildReading(activeType.value, picks.value) : '',
 )
@@ -194,26 +203,27 @@ const drawAgain = () => {
 <template>
   <!-- 뒷면 그림은 여러 곳에서 쓰므로 CSS 변수로 한 번만 넘겨 준다 -->
   <main class="tarot-page" :style="{ '--card-back': `url(${cardBack})` }">
-    <!--
-      무엇을 물을지 고르는 자리.
-      role="tablist" 를 적어 두면 화면 낭독기가 "3개 중 1번째 탭"처럼 읽어 준다.
-    -->
-    <nav class="kind-tabs" role="tablist" aria-label="운세 종류">
-      <button
-        v-for="type in READING_TYPES"
-        :key="type"
-        type="button"
-        role="tab"
-        :aria-selected="activeType === type"
-        :class="{ on: activeType === type }"
-        @click="selectType(type)"
-      >
-        {{ type }}
-        <small>{{ READINGS[type].tabHint }}</small>
-      </button>
-    </nav>
-
     <section class="tarot-intro">
+      <!--
+        무엇을 물을지 고르는 자리 — 머리말과 한 장으로 붙여 둔다.
+        고르는 것과 그 결과가 떨어져 있으면 무엇을 바꾼 것인지 눈에 덜 들어온다.
+        role="tablist" 를 적어 두면 화면 낭독기가 "3개 중 1번째 탭"처럼 읽어 준다.
+      -->
+      <nav class="kind-tabs" role="tablist" aria-label="운세 종류">
+        <button
+          v-for="type in READING_TYPES"
+          :key="type"
+          type="button"
+          role="tab"
+          :aria-selected="activeType === type"
+          :class="{ on: activeType === type }"
+          @click="selectType(type)"
+        >
+          {{ type }}
+          <small>{{ READINGS[type].tabHint }}</small>
+        </button>
+      </nav>
+
       <p class="tarot-eyebrow">{{ config.eyebrow }}</p>
       <h1>{{ config.heading }}</h1>
       <p>{{ formattedDate }} · {{ config.lead }}</p>
@@ -269,7 +279,21 @@ const drawAgain = () => {
       </header>
 
 
-      <p class="reading-text">{{ readingText }}</p>
+      <div v-if="reading" class="reading-text">
+        <article v-for="(para, index) in reading.paragraphs" :key="index" class="para">
+          <p class="para-head">
+            <!-- 자리 이름은 색으로, 뽑힌 카드는 굵게 — 물음과 답이 한눈에 갈린다 -->
+            <span class="para-title">{{ para.title }}</span>
+            <span class="para-card">
+              <b>{{ para.card }}</b>
+              <em :class="para.reversed ? 'rev' : 'up'">{{ para.direction }}</em>
+            </span>
+          </p>
+          <p class="para-body">{{ para.body }}</p>
+        </article>
+
+        <p class="reading-closing">{{ reading.closing }}</p>
+      </div>
 
 
 
@@ -413,7 +437,19 @@ h2 { font-size: 24px; line-height: 1.25; }
 .reading-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
 .reading-head .tarot-kind { margin: 0; }
 .tag { padding: 2px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: 0; }
-.reading-text { margin: 0; color: var(--ink-soft); font-size: 14.5px; line-height: 1.9; white-space: pre-wrap; }
+/* 이제 조각으로 나뉘어 들어오므로 pre-wrap 으로 줄을 세지 않는다 */
+.reading-text { display: grid; gap: 18px; margin: 0; color: var(--ink-soft); font-size: 14.5px; line-height: 1.9; }
+.para { display: grid; gap: 4px; }
+.para-head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; margin: 0; }
+/* 물음(자리 이름)은 색으로 */
+.para-title { color: var(--mystic); font-size: 12.5px; font-weight: 700; letter-spacing: .01em; }
+/* 답(뽑힌 카드)은 굵게 */
+.para-card b { color: var(--ink); font-size: 14.5px; font-weight: 700; }
+.para-card em { margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-style: normal; font-weight: 600; }
+.para-card em.up { background: var(--mystic-soft); color: var(--mystic); }
+.para-card em.rev { background: color-mix(in srgb, var(--gold) 16%, transparent); color: var(--gold); }
+.para-body { margin: 0; }
+.reading-closing { margin: 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
 @keyframes pulse { 50% { opacity: .25; } }
 
 /* ── 카드 고르기 ── */
@@ -457,8 +493,15 @@ h2 { font-size: 24px; line-height: 1.25; }
 .ghost-button:hover { border-color: var(--mystic); color: var(--mystic); }
 
 /* ── 무엇을 물을지 고르는 탭 ── */
-.kind-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
-.kind-tabs button { display: grid; gap: 2px; padding: 9px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--muted); cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 700; text-align: left; transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease; }
+/*
+ * 머리말 카드 안에 얹힌 세 칸.
+ *
+ * 카드의 padding(28px) 을 좌우·위로 밀어내 카드 폭을 그대로 쓰고,
+ * 아래에 실선을 그어 "여기서 고른 것이 아래 내용"임을 보인다.
+ * 세 칸은 아래 .spread 와 같은 3등분이라 세로선이 맞아떨어진다.
+ */
+.kind-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: -28px -28px 20px; padding: 10px 10px 12px; border-bottom: 1px solid var(--line); }
+.kind-tabs button { display: grid; gap: 2px; padding: 11px 16px; border: 1px solid transparent; border-radius: 12px; background: transparent; color: var(--muted); cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 700; text-align: left; transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease; }
 .kind-tabs button small { color: var(--faint); font-size: 11px; font-weight: 500; }
 .kind-tabs button:hover { border-color: var(--mystic-line, var(--line)); color: var(--mystic); }
 .kind-tabs button.on { border-color: var(--mystic); background: var(--mystic); color: var(--on-accent); }

@@ -146,24 +146,42 @@ export const spreadOf = (type) => (READINGS[type] ?? READINGS['오늘의 운세'
  *   ③ reversed 역방향일 때만 (자리마다 다르게 덧붙는다)
  *   ④ lens   이 자리에서는 결국 무슨 뜻인지
  */
-export const buildReading = (type, picks) => {
+export const composeReading = (type, picks) => {
   const config = READINGS[type] ?? READINGS['오늘의 운세']
 
-  const paragraph = (pick, index) => {
+  const paragraphs = picks.map((pick, index) => {
     const slot = config.spread[index]
-    const direction = pick.reversed ? '역방향' : '정방향'
 
-    const body = [
-      slot.frame(pick.card.keyword),
-      pick.card.message,
-      pick.reversed ? slot.reversed : '',
-      slot.lens,
-    ]
-      .filter(Boolean)
-      .join(' ')
+    return {
+      title: slot.title,
+      card: pick.card.name,
+      direction: pick.reversed ? '역방향' : '정방향',
+      reversed: pick.reversed,
+      body: [
+        slot.frame(pick.card.keyword),
+        pick.card.message,
+        pick.reversed ? slot.reversed : '',
+        slot.lens,
+      ]
+        .filter(Boolean)
+        .join(' '),
+    }
+  })
 
-    return `${slot.title} — ${pick.card.name}(${direction})\n${body}`
-  }
+  return { paragraphs, closing: config.closing }
+}
 
-  return `${picks.map(paragraph).join('\n\n')}\n\n${config.closing}`
+/**
+ * 같은 내용을 통짜 글로 — 서버에 기록으로 남길 때 쓴다.
+ *
+ * 화면은 조각(composeReading)으로 받아 자리 제목에 색을, 카드 이름에 굵기를 준다.
+ * 하지만 저장되는 것은 글자뿐이라, 여기서 한 벌의 문자열로 다시 엮는다.
+ * 두 곳이 같은 composeReading 을 보므로 화면과 기록이 어긋날 일이 없다.
+ */
+export const buildReading = (type, picks) => {
+  const { paragraphs, closing } = composeReading(type, picks)
+
+  return `${paragraphs
+    .map((item) => `${item.title} — ${item.card}(${item.direction})\n${item.body}`)
+    .join('\n\n')}\n\n${closing}`
 }
