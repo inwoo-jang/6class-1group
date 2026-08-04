@@ -1,1 +1,0 @@
-var e=`/6class-1group/assets/sunny-BAQK27S9.jpg`;export{e as default};

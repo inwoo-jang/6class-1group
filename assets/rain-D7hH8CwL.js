@@ -1,1 +1,0 @@
-var e=`/6class-1group/assets/rain-Kqpbw2kN.jpg`;export{e as default};
