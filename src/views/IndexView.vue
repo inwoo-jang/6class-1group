@@ -61,16 +61,22 @@ const strip = ref(null)
 let raf = null
 
 /**
- * 끝에 바짝 붙였을 때의 최고 속도(한 프레임에 밀 거리).
- * 60fps 기준 초당 250px 남짓.
+ * 창 끝에 바짝 붙였을 때의 최고 속도(한 프레임에 밀 거리).
+ * 60fps 기준 초당 360px 남짓.
+ * 아래 세제곱 때문에 구간 앞쪽은 훨씬 느리다 — 이 값은 맨 끝에서만 나온다.
  */
-const RUSH = 4.2
+const RUSH = 6
 
 /**
- * 가운데 이만큼은 멈춤 구간.
- * 넓게 잡아야 보려던 칸이 손대는 순간 도망가지 않는다.
+ * 화면을 세로로 三등분한다.
+ *
+ *   왼쪽 1/3   되감긴다. 왼쪽 끝에 가까울수록 빠르다
+ *   가운데 1/3 멈춘다. 여기가 보고 · 누르는 자리다
+ *   오른쪽 1/3 감긴다. 오른쪽 끝에 가까울수록 빠르다
+ *
+ * 가운데를 기준으로 -1~1 로 환산하면 가운데 1/3 은 |t| < 1/3 이다.
  */
-const DEAD = 0.42
+const DEAD = 1 / 3
 
 /** 띠 위에서 마우스가 가로로 어디쯤인지 (0 왼쪽 ~ 1 오른쪽). 없으면 null */
 const at = ref(null)
@@ -125,12 +131,15 @@ const tick = () => {
   raf = requestAnimationFrame(tick)
 }
 
-/** 마우스가 띠 위 어디에 있는지 기록한다 */
+/**
+ * 마우스가 화면 가로로 어디쯤인지 기록한다. 이 값이 곧 흐름을 정한다.
+ * 카드 위든 여백이든 가리지 않는다 — 양쪽 1/3 은 전부 흐르는 자리다.
+ *
+ * 띠가 아니라 창(innerWidth)을 기준으로 잰다.
+ * 눈에 보이는 것은 화면이지 띠의 스크롤 폭이 아니다.
+ */
 const track = (event) => {
-  const el = strip.value
-  if (!el) return
-  const box = el.getBoundingClientRect()
-  at.value = (event.clientX - box.left) / box.width
+  at.value = event.clientX / window.innerWidth
 }
 
 // ── 손으로 넘기기 ──
@@ -151,6 +160,12 @@ let startX = 0
 let startScroll = 0
 let moved = 0
 
+/*
+ * setPointerCapture 는 쓰지 않는다.
+ * 포인터를 붙잡으면 뒤따르는 마우스·클릭 이벤트까지 이 띠로 넘어와서,
+ * 안에 있는 링크가 클릭을 받지 못한다 — 카드가 하나도 안 눌리게 된다.
+ * 대신 창 전체의 pointerup 을 들어 두면 띠 밖에서 손을 떼도 끌기가 풀린다.
+ */
 const onDown = (event) => {
   const el = strip.value
   if (!el || event.button !== 0) return
@@ -158,7 +173,6 @@ const onDown = (event) => {
   moved = 0
   startX = event.clientX
   startScroll = el.scrollLeft
-  el.setPointerCapture?.(event.pointerId)
 }
 
 const onMove = (event) => {
@@ -214,9 +228,14 @@ const nudge = (direction) => {
  */
 onMounted(() => {
   raf = requestAnimationFrame(tick)
+  // 띠 밖에서 손을 떼도 끌기가 풀리도록
+  window.addEventListener('pointerup', onUp)
 })
 
-onBeforeUnmount(() => raf && cancelAnimationFrame(raf))
+onBeforeUnmount(() => {
+  if (raf) cancelAnimationFrame(raf)
+  window.removeEventListener('pointerup', onUp)
+})
 </script>
 
 <template>
@@ -308,8 +327,17 @@ onBeforeUnmount(() => raf && cancelAnimationFrame(raf))
   outline: none;
 }
 
-/* 붙잡을 수 있다는 것을 커서로 알린다 */
-.reel.dragging {
+/* 여백은 "넘기는 곳", 카드는 "누르는 곳" — 커서로 구분해 준다 */
+.reel {
+  cursor: grab;
+}
+
+.frame-cell {
+  cursor: pointer;
+}
+
+.reel.dragging,
+.reel.dragging .frame-cell {
   cursor: grabbing;
 }
 
