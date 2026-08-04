@@ -1,12 +1,18 @@
 <script setup>
 import { computed, defineAsyncComponent, shallowRef, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { findMember } from '../data/members'
 import { loadWork } from '../members'
+import SiteHeader from '../components/SiteHeader.vue'
 
 /**
- * 팀원 한 명의 결과물 화면.
- * 결과물 컴포넌트는 이 주소에 들어왔을 때 비로소 불러온다.
+ * 팀원 한 명의 자리.
+ * ------------------------------------------------------------------
+ * 갤러리가 하는 일은 머리띠를 얹는 것까지다. 그 아래는
+ * 그 사람의 index.vue 에 통째로 넘긴다. 그 안에서 다시 화면이
+ * 나뉘는지(RouterView) 아닌지는 그 사람이 정한다.
+ *
+ * 결과물은 이 주소에 들어왔을 때 비로소 불러온다.
  */
 const props = defineProps({
   slug: { type: String, required: true },
@@ -15,147 +21,179 @@ const props = defineProps({
 const member = computed(() => findMember(props.slug))
 const work = shallowRef(null)
 
+/**
+ * 표지 카드 안에서 축소되어 보이는 중인지 (?preview=1).
+ * 이때는 머리띠와 바닥글을 뺀다. 카드 안에 또 머리띠가 보이면
+ * 사이트 안에 사이트가 든 것처럼 읽혀서 미리보기로 안 보인다.
+ */
+const route = useRoute()
+const isPreview = computed(() => route.query.preview !== undefined)
+
 watch(
   () => props.slug,
   (slug) => {
-    const loader = loadWork(slug)
-    work.value = loader ? defineAsyncComponent(loader) : null
+    const load = loadWork(slug)
+    work.value = load ? defineAsyncComponent(load) : null
   },
   { immediate: true },
 )
 </script>
 
 <template>
-  <div class="member">
-    <header class="bar page">
-      <RouterLink class="back" :to="{ name: 'index' }">
-        <span aria-hidden="true">←</span> 목록
-      </RouterLink>
+  <div class="member" :class="{ preview: isPreview }">
+    <SiteHeader v-if="!isPreview" :here="member?.name ?? slug" :live="member?.live ?? ''" />
 
-      <div class="who">
-        <b>{{ member?.name ?? '알 수 없는 사람' }}</b>
-        <span v-if="member">{{ member.role }}</span>
-      </div>
-
-      <a
-        v-if="member?.live"
-        class="live"
-        :href="member.live"
-        target="_blank"
-        rel="noreferrer"
-      >
-        따로 배포한 사이트 ↗
-      </a>
-    </header>
-
-    <!-- 결과물이 들어온 경우 -->
+    <!-- 결과물이 들어온 경우 — 자리만 내주고 아무 것도 덧그리지 않는다 -->
     <main v-if="work" class="stage">
       <component :is="work" />
     </main>
 
     <!-- 아직 안 들어온 경우 -->
-    <main v-else class="waiting page">
-      <p class="eyebrow">NOT SUBMITTED</p>
+    <main v-else class="waiting">
+      <p class="state">준비 중</p>
       <h2>{{ member?.name ?? '이 사람' }}의 결과물이 아직 없습니다</h2>
       <p class="how">
         <code>src/members/{{ slug }}/index.vue</code> 를 두면 이 자리에 그대로 나타납니다.
       </p>
-      <RouterLink class="to-index" :to="{ name: 'index' }">목록으로 돌아가기</RouterLink>
+      <RouterLink class="pill back" :to="{ name: 'index' }">← 전체 보기</RouterLink>
     </main>
+
+    <footer v-if="member && !isPreview" class="foot">
+      <span class="left">
+        <b>{{ member.name }}</b>
+        <span v-if="member.role" class="role">{{ member.role }}</span>
+      </span>
+      <span class="stack">
+        <i v-for="tech in member.stack" :key="tech">{{ tech }}</i>
+      </span>
+    </footer>
   </div>
 </template>
 
 <style scoped>
-.bar {
+.member {
   display: flex;
-  flex-wrap: wrap;
-  gap: 18px;
-  align-items: center;
-  padding: 26px 0;
-  border-bottom: 1px solid var(--line);
+  flex-direction: column;
+  gap: var(--gap);
+  min-height: 100vh;
+  padding: var(--edge);
 }
 
-.back {
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.06em;
+/*
+ * 카드 안에 축소되어 들어갈 때.
+ * 여백을 없애 결과물이 포스터를 꽉 채우게 하고, 안에서 스크롤이나
+ * 클릭이 일어나지 않게 막는다 — 카드 전체가 하나의 링크여야 한다.
+ */
+.member.preview {
+  /* 프레임 높이를 끝까지 채워야 아래에 다른 색 띠가 생기지 않는다 */
+  min-height: 100vh;
+  padding: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
 }
 
-.back:hover {
-  color: var(--ink);
-}
-
-.who {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: baseline;
-  margin-left: 12px;
-}
-
-.who b {
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-}
-
-.who span {
-  color: var(--faint);
-  font-size: 12.5px;
-}
-
-.live {
-  margin-left: auto;
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-}
-
-.live:hover {
-  color: var(--ink);
-}
-
-/* 결과물은 자기 폭을 스스로 정하게 둔다 */
+/*
+ * 자리만 내주고 아무 것도 덧그리지 않는다.
+ * grid 로 두면 안의 결과물이 남은 높이를 알아서 채운다 —
+ * 결과물이 배경을 깔았을 때 아래가 잘려 보이지 않는다.
+ */
 .stage {
-  padding: clamp(28px, 5vw, 56px) 0 120px;
+  display: grid;
+  flex: 1;
+  min-width: 0;
 }
 
 .waiting {
-  padding: clamp(90px, 20vh, 200px) 0 160px;
+  display: grid;
+  flex: 1;
+  align-content: center;
+  gap: 14px;
+  padding: clamp(60px, 16vh, 140px) 24px;
+  border-radius: var(--radius);
+  background: var(--card);
+  justify-items: center;
+  text-align: center;
 }
 
-.waiting h2 {
-  margin: 18px 0 0;
-  font-size: clamp(24px, 3.4vw, 38px);
+.state {
+  margin: 0;
+  color: var(--fg-muted);
+}
+
+h2 {
+  margin: 0;
+  font-size: 14px;
   font-weight: 400;
-  letter-spacing: -0.03em;
+  letter-spacing: 0.14px;
+  line-height: 16px;
 }
 
 .how {
-  margin: 18px 0 0;
-  color: var(--muted);
-  font-size: 13.5px;
+  margin: 0;
+  color: var(--fg-muted);
 }
 
 .how code {
-  padding: 2px 8px;
-  border: 1px solid var(--line);
-  border-radius: 3px;
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: 12px;
 }
 
-.to-index {
-  display: inline-block;
-  margin-top: 34px;
-  padding: 11px 20px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  font-size: 13px;
+.back {
+  margin-top: 10px;
+  background: var(--surface);
+  transition:
+    color 0.3s var(--ease),
+    background 0.3s var(--ease);
 }
 
-.to-index:hover {
-  border-color: var(--ink);
+.back:hover {
+  color: var(--on-fg);
+  background: var(--fg);
+}
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  height: 36px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px;
+  color: var(--fg-muted);
+}
+
+.left {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.left b {
+  color: var(--fg);
+  font-weight: 400;
+}
+
+.role {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stack {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.stack i {
+  font-style: normal;
+  white-space: nowrap;
+}
+
+@media (max-width: 680px) {
+  .stack {
+    display: none;
+  }
 }
 </style>

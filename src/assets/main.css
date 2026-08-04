@@ -1,48 +1,85 @@
 /**
- * SKALA — Vue Team Gallery
+ * SKALA — 6반 1조 갤러리
  * ------------------------------------------------------------------
- * 색을 거의 쓰지 않는다. 무채색 · 큰 여백 · 얇은 선 세 가지로만 만든다.
- * 강조가 필요한 곳에는 색 대신 크기와 여백의 차이를 준다.
+ * 결과물이 주인공인 화면이다. 껍데기는 최대한 조용해야 한다.
+ *
+ *   ① 글자 크기를 하나로 — 제목도 설명도 캡션도 14px.
+ *      크기로 서열을 매기는 대신 위치와 여백으로 나눈다.
+ *   ② 선 대신 판 — 얇은 구분선을 긋지 않고, 배경보다 살짝 밝은
+ *      둥근 판(카드)을 띄워 구획한다. 모서리는 16px.
+ *   ③ 여백은 10~12px 로 좁게 — 화면 끝까지 판을 채우고
+ *      대신 판과 판 사이만 띄운다.
+ *   ④ 색은 무채색. 색은 각자의 결과물 안에서만 쓴다.
  */
 
 :root {
-  /* 종이 — 완전한 흰색보다 살짝 눌러야 눈이 편하다 */
-  --paper: #f4f3f1;
-  --paper-deep: #eceae7;
-  --surface: #fbfaf9;
+  /* 종이 · 판 */
+  --page: #f5f5f5;
+  --card: #e3e3e3;
+  --card-hover: #dcdcdc;
+  --surface: #eaeaea;
+  --glass: #c8c8c8cc;
 
   /* 글자 */
-  --ink: #121212;
-  --ink-soft: #3b3b3a;
-  --muted: #7a7975;
-  --faint: #a6a49f;
-
-  /* 선 — 아주 얇게, 거의 안 보일 만큼 */
-  --line: #dedbd6;
-  --line-strong: #c6c2bb;
+  --fg: #000000;
+  --fg-muted: #000000a3;
+  --on-fg: #ffffffd9;
 
   --font-sans:
-    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
-    system-ui, sans-serif;
+    Helvetica, 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', Inter, Arial,
+    sans-serif;
   --font-mono: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
 
-  /* 화면 폭 — 넓게 쓰되 양옆 여백은 넉넉히 */
-  --page: min(1240px, calc(100% - 2 * clamp(20px, 6vw, 88px)));
+  /* 이름표 한 곳에서만 쓴다. 아껴 쓸수록 그 한 줄이 살아난다 */
+  --font-display: 'Instrument Serif', 'Apple Garamond', Garamond, 'Times New Roman', serif;
+
+  /* 치수 — 이 넷만 쓴다 */
+  --gap: 12px;
+  --edge: 10px;
+  --radius: 16px;
+  --pill: 36px;
+
+  /* 부드럽게 밀려나는 곡선 하나로 통일한다 */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  color-scheme: light dark;
 }
 
-/* 어두운 화면을 선호하는 사용자에게는 반전해서 보여 준다 */
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #0d0d0d;
-    --paper-deep: #000;
-    --surface: #141414;
-    --ink: #f2f0ed;
-    --ink-soft: #cfccc6;
-    --muted: #8a8781;
-    --faint: #5f5d59;
-    --line: #262523;
-    --line-strong: #3a3835;
+    --page: #131313;
+    --card: #2a2a2a;
+    --card-hover: #333333;
+    --surface: #2a2a2a;
+    --glass: #2a2a2acc;
+
+    --fg: #f5f5f5;
+    --fg-muted: #f5f5f5a3;
+    --on-fg: #131313d9;
   }
+}
+
+/* 화면 위 토글로 뒤집을 때는 이쪽이 이긴다 */
+:root[data-theme='light'] {
+  --page: #f5f5f5;
+  --card: #e3e3e3;
+  --card-hover: #dcdcdc;
+  --surface: #eaeaea;
+  --glass: #c8c8c8cc;
+  --fg: #000000;
+  --fg-muted: #000000a3;
+  --on-fg: #ffffffd9;
+}
+
+:root[data-theme='dark'] {
+  --page: #131313;
+  --card: #2a2a2a;
+  --card-hover: #333333;
+  --surface: #2a2a2a;
+  --glass: #2a2a2acc;
+  --fg: #f5f5f5;
+  --fg-muted: #f5f5f5a3;
+  --on-fg: #131313d9;
 }
 
 *,
@@ -53,17 +90,19 @@
 
 html {
   -webkit-font-smoothing: antialiased;
-  scroll-behavior: smooth;
   text-rendering: optimizeLegibility;
 }
 
 body {
   margin: 0;
-  background: var(--paper);
-  color: var(--ink);
+  color: var(--fg);
+  background: var(--page);
   font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 1.6;
+
+  /* 사이트 전체가 이 한 종류의 글자로 되어 있다 */
+  font-size: 14px;
+  letter-spacing: 0.14px;
+  line-height: 16px;
 }
 
 a {
@@ -72,7 +111,8 @@ a {
 }
 
 button {
-  font-family: inherit;
+  font: inherit;
+  letter-spacing: inherit;
 }
 
 /* 화면 낭독기에만 보이는 글 */
@@ -85,32 +125,59 @@ button {
   white-space: nowrap;
 }
 
-/* 공통 조판 */
-.page {
-  width: var(--page);
-  margin: 0 auto;
+/* ── 공통 부품 ──
+   알약. 헤더 · 버튼 · 태그가 전부 같은 높이(36px)와 모양을 쓴다. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  height: var(--pill);
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--fg);
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  white-space: nowrap;
 }
 
-.eyebrow {
-  margin: 0;
-  color: var(--faint);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+button.pill {
+  cursor: pointer;
+  transition:
+    color 0.3s var(--ease),
+    background 0.3s var(--ease);
 }
 
-/* 움직임을 줄여 달라고 설정한 사용자에게는 정지 화면으로 */
+button.pill:hover {
+  color: var(--on-fg);
+  background: var(--fg);
+}
+
+/* 순번 뱃지 — 목록의 몇 번째인지 */
+.marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  color: var(--page);
+  background: var(--fg);
+  font-size: 10px;
+  line-height: 16px;
+  letter-spacing: 0;
+}
+
+::selection {
+  color: var(--page);
+  background: var(--fg);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
   *,
   *::before,
   *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
   }
 }
