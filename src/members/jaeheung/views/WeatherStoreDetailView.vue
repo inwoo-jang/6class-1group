@@ -1,5 +1,8 @@
 <script setup>
-/* 상세 기상관측 화면. /m/jaeheung/weather/:cityId 로 들어온다. */
+/* ── [Store 실습 / 과제5] WeatherStoreDetailView.vue ──
+   WeatherDetailView.vue(과제4)를 기반으로, Pinia configStore의 단위 설정에 따라
+   기온/체감온도 표시를 섭씨/화씨로 변환한다. 도시 목록은 과제4(Open-Meteo)와 분리된
+   useOpenWeatherCities(Axios + OpenWeatherMap) 싱글턴을 공유한다. */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useOpenWeatherCities } from '../composables/useOpenWeatherCities'
@@ -43,12 +46,13 @@ watch(
 
 const dustGrade = computed(() => gradePm10(airQuality.value?.pm10 ?? null))
 
+/* ── [Store 실습] 단위 설정(configStore)에 따라 기온/체감온도 표시를 변환 ── */
 const toDisplayTemp = (rawTemp) => {
   if (rawTemp === null || rawTemp === undefined) return null
   if (configStore.unit === 'fahrenheit') {
-    return Math.round((rawTemp * 9) / 5 + 32)
+    return Math.round((rawTemp * 9) / 5 + 32) // 화씨 변환 연산
   }
-  return rawTemp
+  return rawTemp // 'celsius'일 때는 원본 그대로 반환
 }
 const displayTemp = computed(() => toDisplayTemp(city.value?.temp))
 const displayFeelsLike = computed(() => toDisplayTemp(city.value?.feelsLike))

@@ -1,14 +1,17 @@
 <script setup>
+/* ── [Store 실습 / 과제5] WeatherStoreAboutView.vue ── 서비스 소개용 정적 페이지 */
 import { link } from '../routes'
 </script>
 
 <template>
   <div class="card-panel">
-    <p class="panel-title">ℹ️ 날씨 대시보드 소개</p>
+    <p class="panel-title">ℹ️ 날씨 대시보드 소개 (Store 적용)</p>
 
     <p class="lead">
-      Axios + OpenWeatherMap으로 만든 미니 날씨 대시보드입니다.
-      단위 설정(섭씨/화씨)이 대시보드와 상세 페이지에 함께 반영됩니다.
+      이 페이지는 Pinia Store + Axios 실습을 위해 만든 미니 날씨 대시보드입니다. 과제4(Router
+      실습)의 기능을 그대로 이어받으면서, <code>stores/configStore.js</code>로 날씨 단위(섭씨/화씨)
+      설정을 전역 상태로 관리하고, 날씨 데이터는 Axios로 OpenWeatherMap API를 호출해 가져옵니다
+      (과제4는 Open-Meteo를 그대로 사용하며 서로 영향을 주지 않습니다).
     </p>
 
     <ul class="feature-list">
@@ -21,8 +24,10 @@ import { link } from '../routes'
       <li>➕ <strong>도시 추가</strong> — 목록에 없는 도시도 이름으로 검색해 직접 추가할 수 있고,
         추가한 도시는 다음 방문에도 남아 있습니다.</li>
       <li>🗺️ <strong>지도</strong> — 카드 목록과 지도의 선택 상태가 서로 연동됩니다.</li>
-      <li>📡 <strong>상세 페이지</strong> — 카드의 "상세보기"를 누르면 해당 도시의 상세 관측 정보를
-        보여줍니다.</li>
+      <li>📡 <strong>상세 페이지</strong> — 카드의 "상세보기"를 누르면
+        <code>/weather-store/:cityId</code>로 이동해 해당 도시의 상세 관측 정보를 보여줍니다.</li>
+      <li>🚧 <strong>404 페이지</strong> — 존재하지 않는 주소로 접근하면 Catch-all Route가 대신
+        안내해 줍니다.</li>
     </ul>
 
     <RouterLink :to="link('home')" class="back-btn">← 메인 대시보드로 돌아가기</RouterLink>
@@ -82,9 +87,14 @@ import { link } from '../routes'
 .feature-list strong {
   color: var(--magpie-accent);
 }
+.feature-list code {
+  background: var(--color-border);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12.5px;
+}
 .back-btn {
   display: block;
-  width: 100%;
   text-align: center;
   text-decoration: none;
   background: var(--magpie-gradient);
@@ -93,7 +103,6 @@ import { link } from '../routes'
   padding: 12px;
   font-size: 14px;
   font-weight: 700;
-  box-sizing: border-box;
 }
 .back-btn:hover {
   filter: brightness(1.08);

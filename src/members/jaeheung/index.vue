@@ -1,9 +1,19 @@
 <script setup>
-import { RouterView } from 'vue-router'
+import { computed } from 'vue'
+import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { link } from './routes'
+
+const route = useRoute()
+const isMagpieHeung = computed(() => route.name === 'jaeheung.magpie-heung')
 </script>
 
 <template>
   <div class="jaeheung">
+    <nav class="jh-nav">
+      <RouterLink :to="link('home')" :class="{ on: !isMagpieHeung }">🌤️ 날씨 대시보드</RouterLink>
+      <RouterLink :to="link('magpie-heung')" :class="{ on: isMagpieHeung }">🐦 흥부와 까치</RouterLink>
+    </nav>
+
     <RouterView />
   </div>
 </template>
@@ -43,6 +53,7 @@ import { RouterView } from 'vue-router'
   --magpie-gradient: linear-gradient(135deg, var(--magpie-teal), var(--magpie-blue) 55%, var(--magpie-violet));
   --magpie-accent: var(--magpie-blue);
   --magpie-accent-soft: rgba(46, 134, 222, 0.14);
+  --magpie-accent-strong: rgba(46, 134, 222, 0.3);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -55,6 +66,28 @@ import { RouterView } from 'vue-router'
     --color-text: rgba(235, 235, 235, 0.8);
     --magpie-accent: var(--magpie-teal);
     --magpie-accent-soft: rgba(23, 165, 137, 0.18);
+    --magpie-accent-strong: rgba(23, 165, 137, 0.35);
   }
+}
+
+.jh-nav {
+  display: flex;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--color-background-mute);
+  border: 1px solid var(--color-border);
+}
+.jh-nav a {
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  text-decoration: none;
+}
+.jh-nav a.on {
+  background: var(--magpie-gradient);
+  color: #fff;
 }
 </style>
