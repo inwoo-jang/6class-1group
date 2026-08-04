@@ -1,1 +1,0 @@
-import{R as e,p as t,v as n,yt as r}from"./runtime-core.esm-bundler-36cGDk4R.js";import{n as i}from"./vue-router-CC2JqD6l.js";import{t as a}from"./_plugin-vue_export-helper-BDNMzG2s.js";var o={class:`jaeheung`},s=a({__name:`index`,setup(a){return(a,s)=>(e(),t(`div`,o,[n(r(i))]))}},[[`__scopeId`,`data-v-9b991804`]]);export{s as default};
