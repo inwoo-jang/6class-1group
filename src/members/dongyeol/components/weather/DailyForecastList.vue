@@ -1,0 +1,272 @@
+<script setup>
+import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
+
+import ForecastListSection from '@/members/dongyeol/components/weather/ForecastListSection.vue'
+import WeatherConditionIcon from '@/members/dongyeol/components/weather/WeatherConditionIcon.vue'
+import { useConfigStore } from '@/members/dongyeol/stores/configStore'
+import { formatForecastDateParts, getForecastVisual } from '@/members/dongyeol/utils/forecastPresentation'
+import { convertTemperature } from '@/members/dongyeol/utils/temperature'
+
+const props = defineProps({
+  items: {
+    type: Array,
+    default: () => [],
+  },
+  timezoneOffset: {
+    type: Number,
+    default: 0,
+  },
+})
+
+const configStore = useConfigStore()
+const { unit, unitSymbol } = storeToRefs(configStore)
+
+const displayItems = computed(() => {
+  return props.items.map((item, index) => {
+    const date = formatForecastDateParts(item?.timestamp, props.timezoneOffset)
+    const minimum = convertTemperature(item?.minTemperature, unit.value)
+    const maximum = convertTemperature(item?.maxTemperature, unit.value)
+
+    return {
+      ...item,
+      ...date,
+      ...getForecastVisual(item),
+      key: `${item?.date ?? item?.timestamp ?? 'missing'}-${index}`,
+      minimum,
+      maximum,
+    }
+  })
+})
+</script>
+
+<template>
+  <ForecastListSection title-id="daily-forecast-title" title="5일 예보" summary="최저 / 최고">
+    <ol class="daily-list">
+      <li v-for="item in displayItems" :key="item.key" class="daily-item">
+        <div class="day-label">
+          <strong>{{ item.weekday }}</strong>
+          <time v-if="item.dateTime" :datetime="item.dateTime">{{ item.dateLabel }}</time>
+        </div>
+
+        <WeatherConditionIcon class="forecast-icon" :category="item.category" :is-night="item.isNight" />
+        <span class="condition-text">{{ item.conditionLabel }}</span>
+
+        <span class="precipitation" :aria-label="`강수확률 ${item.precipitation === null ? '정보 없음' : `${item.precipitation}%`}`">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3S6.5 9.2 6.5 14a5.5 5.5 0 0 0 11 0C17.5 9.2 12 3 12 3Z" /></svg>
+          {{ item.precipitation === null ? '—' : `${item.precipitation}%` }}
+        </span>
+
+        <div class="temperature-range">
+          <span :class="{ missing: item.minimum === null }">
+            <span class="sr-only">최저 기온 {{ item.minimum === null ? '정보 없음' : `${item.minimum}${unitSymbol}` }}</span>
+            <span aria-hidden="true"
+              >{{ item.minimum ?? '—' }}<small v-if="item.minimum !== null">{{ unitSymbol }}</small></span
+            >
+          </span>
+          <i aria-hidden="true"></i>
+          <strong :class="{ missing: item.maximum === null }">
+            <span class="sr-only">최고 기온 {{ item.maximum === null ? '정보 없음' : `${item.maximum}${unitSymbol}` }}</span>
+            <span aria-hidden="true"
+              >{{ item.maximum ?? '—' }}<small v-if="item.maximum !== null">{{ unitSymbol }}</small></span
+            >
+          </strong>
+        </div>
+      </li>
+    </ol>
+  </ForecastListSection>
+</template>
+
+<style scoped>
+.daily-list {
+  margin: 0;
+  padding: 0 4px;
+  list-style: none;
+}
+
+.daily-item {
+  display: grid;
+  min-height: 78px;
+  grid-template-columns: minmax(82px, 0.7fr) 46px minmax(150px, 1.5fr) minmax(74px, 0.6fr) minmax(142px, 0.8fr);
+  align-items: center;
+  gap: 18px;
+  padding: 13px 2px;
+}
+
+.daily-item + .daily-item {
+  border-top: 1px solid color-mix(in srgb, var(--hero-text) 12%, transparent);
+}
+
+.day-label {
+  display: grid;
+  gap: 2px;
+}
+
+.day-label strong {
+  font-size: 15px;
+}
+
+.day-label time,
+.condition-text,
+.precipitation {
+  color: var(--hero-muted);
+}
+
+.day-label time {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.forecast-icon {
+  width: 42px;
+  height: 42px;
+  color: var(--weather-accent);
+}
+
+.condition-text {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.precipitation {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.precipitation svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.temperature-range {
+  display: grid;
+  grid-template-columns: minmax(42px, auto) minmax(24px, 1fr) minmax(42px, auto);
+  align-items: center;
+  gap: 9px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.temperature-range > span:not(.sr-only) {
+  color: var(--hero-muted);
+}
+
+.temperature-range i {
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--weather-accent) 34%, white), var(--weather-accent));
+}
+
+.temperature-range small {
+  margin-left: 2px;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.temperature-range .missing {
+  color: var(--hero-muted);
+}
+
+@media (max-width: 700px) {
+  .daily-list {
+    padding-inline: 16px;
+  }
+
+  .daily-item {
+    grid-template-areas:
+      'day icon condition temperature'
+      'day icon precipitation temperature';
+    grid-template-columns: 62px 40px minmax(0, 1fr) minmax(112px, auto);
+    gap: 2px 10px;
+  }
+
+  .day-label {
+    grid-area: day;
+  }
+
+  .forecast-icon {
+    grid-area: icon;
+  }
+
+  .condition-text {
+    grid-area: condition;
+    align-self: end;
+  }
+
+  .precipitation {
+    grid-area: precipitation;
+    align-self: start;
+    font-size: 10px;
+  }
+
+  .temperature-range {
+    grid-area: temperature;
+  }
+}
+
+@media (max-width: 560px) {
+  .daily-list {
+    padding-inline: 0;
+  }
+
+  .daily-item {
+    min-height: 72px;
+    grid-template-columns: 54px 36px minmax(0, 1fr) minmax(100px, auto);
+    column-gap: 8px;
+  }
+
+  .forecast-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .condition-text {
+    font-size: 12px;
+  }
+
+  .temperature-range {
+    grid-template-columns: auto 20px auto;
+    gap: 5px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 390px) {
+  .daily-item {
+    grid-template-columns: 48px 32px minmax(0, 1fr) minmax(88px, auto);
+    column-gap: 6px;
+  }
+
+  .day-label strong {
+    font-size: 13px;
+  }
+
+  .day-label time {
+    font-size: 10px;
+  }
+
+  .forecast-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .temperature-range {
+    grid-template-columns: auto 14px auto;
+    gap: 3px;
+    font-size: 12px;
+  }
+}
+</style>

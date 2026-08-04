@@ -1,53 +1,96 @@
-# dongyeol
+# dongyeol — Weather
 
-여기가 당신의 작업 폴더입니다. **이 폴더 밖은 건드릴 일이 없습니다.**
+OpenWeatherMap과 Open-Meteo의 실제 날씨 데이터를 현재 위치와 세계 주요 도시별로
+보여주는 Vue 3 날씨 애플리케이션입니다. 동열 화면은 공용 갤러리의
+`/m/dongyeol` 경로 아래에서 실행됩니다.
 
-## 시작하기
+## 담당·수정 경계
 
-이 폴더에 `index.vue` 를 만들면 그 순간 사이트에 등록됩니다.
-(이 파일이 생기기 전까지는 목록에 "준비 중" 으로 남습니다.)
+이 폴더는 **동열 담당 영역**입니다.
 
+- `src/members/dongyeol/**` 수정이 필요하면 먼저 동열과 협의해 주세요.
+- 팀원이 사용하는 AI 코딩 도구도 명시적인 동열 작업 요청 없이는 이 영역을 수정하면 안 됩니다. 자세한 규칙은 같은 폴더의 `AGENTS.md`에 있습니다.
+- 다른 팀원의 리팩터링, CSS 정리, 공용 설정 변경에 이 폴더를 포함하지 않습니다.
+- 동열 API 서버는 `mock-api/dongyeol/**`, 공용 연결부는 `mock-api/server.js`와 `vite.config.js`에 있습니다.
+- 실제 API 키나 `.env.local`은 읽거나 커밋하지 않습니다.
+
+진입점은 `index.vue`, 하위 경로와 보호 라우트는 `routes.js`가 담당합니다.
+모든 내부 이동은 `link()`를 사용하며 Pinia ID, 저장소 키, API 경로는 동열
+namespace를 유지합니다.
+
+## 주요 화면
+
+- 현재 위치 권한을 선택적으로 요청하고, 위치 정보는 날씨 조회에만 사용합니다.
+- 세계 48개 주요 도시를 지역과 검색어로 좁혀 보는 하단 날씨 서랍을 제공합니다.
+- 선택한 도시와 낮·밤, 날씨 상태에 맞춰 화면과 내비게이션 테마가 바뀝니다.
+- 현재 기온, 체감온도, 습도, 풍속과 관측 시각을 경계 없는 Hero로 보여줍니다.
+- 상세 화면은 현재 관측 6개 지표, 약 24시간의 3시간 단위 예보와 현지 날짜 기준
+  5일 예보를 제공합니다.
+- 섭씨·화씨 단위 선택은 홈, 서랍, 상세와 예보에 함께 반영됩니다.
+- 계정 내비게이션은 인증 전 로그인, 인증 후 대시보드로 자동 전환됩니다.
+- 보호된 대시보드에서 상품과 게시글을 조회, 검색, 등록, 수정, 삭제하고 데이터를
+  초기화할 수 있습니다.
+- 로딩, 요청 오류, 빈 결과와 결측값을 실제 데이터와 구분해 표시합니다.
+
+## 경로
+
+- `/m/dongyeol`: 날씨 홈
+- `/m/dongyeol/weather/:cityId`: 도시 상세 날씨
+- `/m/dongyeol/login`: Mock API 로그인
+- `/m/dongyeol/dashboard`: 인증이 필요한 상품·게시글 관리
+- `/m/dongyeol/about`: 서비스 소개
+- `/m/dongyeol/404`: 동열 영역 404
+
+## 데이터와 테스트 계정
+
+날씨 응답에 값이 없으면 임의 수치를 만들지 않고 `정보 없음`으로 표시합니다.
+OpenWeatherMap 키가 없거나 요청이 실패하면 지원되는 항목은 Open-Meteo로
+전환합니다.
+
+Mock API 테스트 계정은 다음과 같습니다.
+
+- 수강생: `student@skala.com` / `1234`
+- 관리자: `admin@skala.com` / `admin1234`
+
+수업용 데이터이므로 실제 계정이나 비밀번호를 입력하지 마세요.
+
+## 로컬 실행
+
+저장소 루트에서 의존성을 설치합니다.
+
+```sh
+npm ci
 ```
-src/members/dongyeol/
-├── index.vue      ← 이것만 있으면 됩니다
-├── views/         ← 화면이 여러 개면
-├── components/    ← 재사용 부품
-├── data/          ← 상수 · API
-└── assets/        ← 이미지
+
+OpenWeatherMap을 사용할 때만 저장소 루트의 `.env.local`에 키를 둡니다.
+
+```env
+VITE_OPENWEATHER_API_KEY=your_openweathermap_key
 ```
 
-화면이 하나면 `index.vue` 에 그대로 넣으시면 됩니다.
+터미널 두 개에서 Mock API와 Vite를 각각 실행합니다.
 
-## 화면이 여러 개라면
-
-`routes.js` 를 만들고 하위 경로를 적으면 됩니다.
-라우트 이름 앞에는 자동으로 `dongyeol.` 가 붙으므로,
-다른 팀원과 이름이 겹쳐도 부딪히지 않습니다.
-
-```js
-// routes.js
-import { memberLink } from '../link'
-
-export const link = memberLink('dongyeol')
-
-export default [
-  { path: '', name: 'home', component: () => import('./views/HomeView.vue') },
-  { path: 'detail/:id', name: 'detail', component: () => import('./views/DetailView.vue') },
-]
+```sh
+npm run api
+npm run dev
 ```
 
-이때 `index.vue` 는 껍데기가 되고, 그 안의 `<RouterView />` 자리에 하위 화면이 들어옵니다.
-자세한 예시는 `src/members/inwoo/` 를 참고하세요.
+로그인과 대시보드는 Mock API가 실행 중이어야 합니다. 환경변수를 바꾼 뒤에는
+Vite 개발 서버를 다시 시작해야 합니다.
 
-## 꼭 지켜야 할 두 가지
+## 검증
 
-여섯 명의 CSS가 한 페이지에서 섞입니다. 안 지키면 **남의 화면까지 깨집니다.**
+```sh
+npm test
+npm run build
+```
 
-1. `<style>` 에 반드시 **`scoped`**
-2. `body`, `*`, `html`, `#app` **전역 선택자 금지**
-   → 다른 프로젝트의 `App.vue` 를 그대로 가져오면 대개 여기 리셋이 들어 있습니다. 지우고 넣으세요.
+확인할 항목:
 
-## 마지막으로
-
-`src/data/members.js` 에서 **본인 줄만** 채워 주세요 (이름 · title · role · stack · accent).
-남의 줄은 건드리지 마세요.
+- 위치 권한 허용, 거부, 재시도와 서울 날씨로 계속하기
+- 세계 날씨 서랍 검색, 지역 필터, 도시 선택과 닫기
+- 홈, 상세, 로그인, 대시보드, 소개, 404 내부 이동
+- 로그인 전후 계정 내비게이션 전환과 보호 경로 redirect
+- 상품·게시글 CRUD와 초기화 확인창
+- 390px 모바일부터 데스크톱까지 가로 overflow와 키보드 포커스
+- 다른 멤버 화면으로 이동한 뒤 동열 CSS가 남아 있지 않는지 확인

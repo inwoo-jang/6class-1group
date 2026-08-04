@@ -1,0 +1,84 @@
+import { computed, ref } from 'vue'
+import { defineStore } from 'pinia'
+
+import { authApi } from '@/members/dongyeol/api/authApi.js'
+import { accessTokenKey } from '@/members/dongyeol/api/http.js'
+
+const userStorageKey = 'dongyeol-skala-vue-jwt-user'
+
+function readStoredUser() {
+  try {
+    return JSON.parse(sessionStorage.getItem(userStorageKey))
+  } catch {
+    return null
+  }
+}
+
+export const useAuthStore = defineStore('dongyeol-auth', () => {
+  const accessToken = ref(sessionStorage.getItem(accessTokenKey))
+  const user = ref(readStoredUser())
+  const isLoading = ref(false)
+  const errorMessage = ref('')
+
+  const isLoggedIn = computed(() => Boolean(accessToken.value && user.value))
+
+  function saveAuthentication(loginResponse) {
+    accessToken.value = loginResponse.accessToken
+    user.value = loginResponse.user
+
+    sessionStorage.setItem(accessTokenKey, loginResponse.accessToken)
+    sessionStorage.setItem(userStorageKey, JSON.stringify(loginResponse.user))
+  }
+
+  function clearAuthentication() {
+    accessToken.value = null
+    user.value = null
+    sessionStorage.removeItem(accessTokenKey)
+    sessionStorage.removeItem(userStorageKey)
+  }
+
+  async function login(email, password) {
+    isLoading.value = true
+    errorMessage.value = ''
+
+    try {
+      const result = await authApi.login({ email, password })
+      saveAuthentication(result)
+      return true
+    } catch (error) {
+      clearAuthentication()
+      errorMessage.value = error.message
+      return false
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function fetchMyProfile() {
+    try {
+      const profile = await authApi.getMyProfile()
+      user.value = profile
+      sessionStorage.setItem(userStorageKey, JSON.stringify(profile))
+      return profile
+    } catch (error) {
+      if (error.status === 401) clearAuthentication()
+      throw error
+    }
+  }
+
+  function logout() {
+    clearAuthentication()
+    errorMessage.value = ''
+  }
+
+  return {
+    accessToken,
+    user,
+    isLoading,
+    errorMessage,
+    isLoggedIn,
+    login,
+    logout,
+    fetchMyProfile,
+  }
+})

@@ -19,6 +19,9 @@ const props = defineProps({
 })
 
 const member = computed(() => findMember(props.slug))
+const memberStyle = computed(() => ({
+  '--member-bottom-clearance': member.value?.bottomClearance ?? '0px',
+}))
 const work = shallowRef(null)
 
 /**
@@ -40,7 +43,7 @@ watch(
 </script>
 
 <template>
-  <div class="member" :class="{ preview: isPreview }">
+  <div class="member" :class="{ preview: isPreview }" :style="memberStyle">
     <SiteHeader v-if="!isPreview" :here="member?.name ?? slug" :live="member?.live ?? ''" />
 
     <!-- 결과물이 들어온 경우 — 자리만 내주고 아무 것도 덧그리지 않는다 -->
@@ -77,6 +80,7 @@ watch(
   gap: var(--gap);
   min-height: 100vh;
   padding: var(--edge);
+  padding-bottom: calc(var(--edge) + var(--member-bottom-clearance));
 }
 
 /*

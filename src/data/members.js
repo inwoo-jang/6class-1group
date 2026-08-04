@@ -11,6 +11,7 @@
  * stack    쓴 기술
  * accent   카드 포스터에 쓰는 색 하나
  * live     따로 배포한 주소가 있으면 적는다. 없으면 비워 둔다
+ * bottomClearance  화면 하단에 고정 UI가 있는 경우 footer 아래에 남길 공간 (선택)
  *
  * "결과물이 들어왔는지"는 여기 적지 않는다.
  * src/members/<slug>/ 폴더가 있으면 있는 것이고, 없으면 없는 것이다.
@@ -38,28 +39,29 @@ export const MEMBERS = [
   {
     slug: 'jaeheung',
     name: '재흥',
-    title: '날씨 대시보드 (Store 실습)',
+    title: 'WeatherCast Kkachi',
     role: '도시 검색·추가와 지도가 있는 실시간 날씨 대시보드',
     stack: ['Vue Router', 'Axios', 'OpenWeatherMap', 'Leaflet'],
     accent: '#7a4a86',
     live: '',
   },
   {
-    slug: 'yeongwoo',
+    slug: 'youngwoo',
     name: '영우',
-    title: '',
-    role: '아직 소개가 없습니다',
-    stack: [],
+    title: 'Weather Dashboard',
+    role: '국내·해외 도시 날씨를 지도·온도계·날씨 이펙트로 한눈에',
+    stack: ['Vue Router', 'Pinia', 'Axios', 'Leaflet'],
     accent: '#96602c',
     live: '',
   },
   {
     slug: 'dongyeol',
     name: '동열',
-    title: '',
-    role: '아직 소개가 없습니다',
-    stack: [],
-    accent: '#8a2f3f',
+    title: 'Weather & API Lab',
+    role: '실시간 날씨·예보와 JWT 기반 상품·게시글 CRUD',
+    stack: ['Vue Router', 'Pinia', 'Axios', 'Element Plus'],
+    accent: '#3f6665',
+    bottomClearance: '76px',
     live: '',
   },
   {

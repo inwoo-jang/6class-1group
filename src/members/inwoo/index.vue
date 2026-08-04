@@ -88,6 +88,169 @@ const logout = () => {
 </template>
 
 <style scoped>
+/*
+ * ── 내 화면의 색 ───────────────────────────────────────────────
+ *
+ * 갤러리의 공용 토큰(--card · --fg …)과 내 화면이 쓰는 토큰(--accent ·
+ * --paper · --ink …)은 이름이 다르다. 그래서 개인 저장소에서 그대로
+ * 옮겨 오면 값이 비어 회색으로 주저앉는다.
+ *
+ * 공용 assets/main.css 를 고치면 팀원 화면까지 같이 바뀌므로,
+ * 여기 .final 안에만 내 팔레트를 선언한다. CSS 변수는 자식으로
+ * 내려가므로 이 아래 화면들은 전부 개인 프로젝트와 같은 색을 쓴다.
+ *
+ * 값은 inwoo-vue/src/assets/main.css 의 editorial · terminal 테마를 따르되,
+ * 강조색만 검정으로 바꿨다. 갤러리 전체가 무채색이라 초록이 혼자 튄다.
+ */
+.final {
+  --paper: #f6f4ef;
+  --surface: #fffefb;
+  --surface-sunken: #efece4;
+
+  --ink: #16191c;
+  --ink-soft: #3d4348;
+  --muted: #6f7479;
+  --faint: #9b9f9f;
+
+  --line: #e4e0d6;
+  --line-strong: #cfcabb;
+
+  --accent: #16191c;
+  --accent-deep: #000000;
+  --accent-tint: #ecebe6;
+  --accent-line: #cfcabb;
+  --on-accent: #ffffff;
+
+  --signal: #9a5b18;
+  --signal-tint: #f7efe3;
+  --signal-line: #e3d3ba;
+
+  --slate: #3f5666;
+  --slate-deep: #26373f;
+  --slate-tint: #ecefef;
+  --slate-line: #d2d8d9;
+
+  --danger: #a63d32;
+  --danger-tint: #f8ebe8;
+
+  --radius: 6px;
+  --radius-lg: 8px;
+  --shadow: none;
+  --card-border: 1px solid var(--line);
+
+  color: var(--ink);
+}
+
+/* 어두운 화면 — 갤러리의 전환 방식(시스템 설정 · 우측 상단 토글)을 그대로 따른다 */
+@media (prefers-color-scheme: dark) {
+  .final {
+    --paper: #14181f;
+    --surface: #1b212b;
+    --surface-sunken: #232b37;
+
+    --ink: #e8edf4;
+    --ink-soft: #c2ccda;
+    --muted: #8b98a9;
+    --faint: #6c7889;
+
+    --line: #2b3543;
+    --line-strong: #3c4859;
+
+    --accent: #e8edf4;
+    --accent-deep: #ffffff;
+    --accent-tint: #232b37;
+    --accent-line: #3c4859;
+    --on-accent: #14181f;
+
+    --signal: #e8a866;
+    --signal-tint: #2a2318;
+    --signal-line: #4a3a24;
+
+    --slate: #79b8e0;
+    --slate-deep: #a5d3f0;
+    --slate-tint: #1a2530;
+    --slate-line: #2d3f4e;
+
+    --danger: #f0847a;
+    --danger-tint: #2c1d1c;
+  }
+}
+
+/* 토글로 밝게 되돌렸을 때는 시스템 설정보다 그쪽이 이긴다 */
+:root[data-theme='light'] .final {
+  --paper: #f6f4ef;
+  --surface: #fffefb;
+  --surface-sunken: #efece4;
+  --ink: #16191c;
+  --ink-soft: #3d4348;
+  --muted: #6f7479;
+  --faint: #9b9f9f;
+  --line: #e4e0d6;
+  --line-strong: #cfcabb;
+  --accent: #16191c;
+  --accent-deep: #000000;
+  --accent-tint: #ecebe6;
+  --accent-line: #cfcabb;
+  --on-accent: #ffffff;
+  --signal: #9a5b18;
+  --signal-tint: #f7efe3;
+  --signal-line: #e3d3ba;
+  --slate: #3f5666;
+  --slate-deep: #26373f;
+  --slate-tint: #ecefef;
+  --slate-line: #d2d8d9;
+  --danger: #a63d32;
+  --danger-tint: #f8ebe8;
+}
+
+:root[data-theme='dark'] .final {
+  --paper: #14181f;
+  --surface: #1b212b;
+  --surface-sunken: #232b37;
+  --ink: #e8edf4;
+  --ink-soft: #c2ccda;
+  --muted: #8b98a9;
+  --faint: #6c7889;
+  --line: #2b3543;
+  --line-strong: #3c4859;
+  --accent: #e8edf4;
+  --accent-deep: #ffffff;
+  --accent-tint: #232b37;
+  --accent-line: #3c4859;
+  --on-accent: #14181f;
+  --signal: #e8a866;
+  --signal-tint: #2a2318;
+  --signal-line: #4a3a24;
+  --slate: #79b8e0;
+  --slate-deep: #a5d3f0;
+  --slate-tint: #1a2530;
+  --slate-line: #2d3f4e;
+  --danger: #f0847a;
+  --danger-tint: #2c1d1c;
+}
+
+/*
+ * 판(카드)의 유리 — 뒤의 하늘이 비쳐 보이게 한다.
+ *
+ * 배경에 날씨를 그려 놓고 그 위에 불투명한 판을 덮으면 배경이 있으나 마나다.
+ * 운세 화면은 진작 반투명이었는데 날씨·기록만 꽉 막혀 있어 서로 달라 보였다.
+ *
+ * 값을 여기 한 번만 적어도 되는 이유 —
+ * color-mix 안의 var(--surface) 는 이 줄에서 계산되지 않고 쓰이는 순간
+ * 풀린다. 그래서 밝을 때·어두울 때 각각의 --surface 를 알아서 따라간다.
+ */
+.final {
+  --panel: color-mix(in srgb, var(--surface) 82%, transparent);
+  --panel-line: color-mix(in srgb, var(--surface) 75%, transparent);
+
+  /*
+   * 판 안에 다시 얹히는 줄(날씨 카드 · 기록 항목)은 더 옅게 깐다.
+   * 반투명 위에 반투명을 겹치면 불투명에 가까워져, 겉판만 비치고
+   * 정작 목록이 있는 가운데는 다시 꽉 막힌 것처럼 보이기 때문이다.
+   */
+  --panel-inner: color-mix(in srgb, var(--surface) 55%, transparent);
+}
+
 .final {
   position: relative;
   display: grid;
