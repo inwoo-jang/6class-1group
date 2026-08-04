@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import WeatherIcon from '../components/WeatherIcon.vue'
 import UiIcon from '../components/UiIcon.vue'
 import { fetchWeather, nearestCity } from '../components/weatherApi'
+import { backdropStatus } from '../data/backdropState'
 import { useConfigStore } from '../stores/configStore'
 import { link } from '../routes'
 
@@ -29,6 +30,30 @@ const here = ref(null)
  */
 const state = ref('idle')
 
+/**
+ * 위치를 못 얻었을 때 배경이 기대는 도시.
+ *
+ * 홈은 원래 배경에 아무 말도 하지 않아서, 날씨 화면에 들어가기 전까지는
+ * 늘 기본 하늘(구름 조금)만 보였다. 갤러리 목록의 미리보기는 이 홈을
+ * iframe 으로 띄우는데, iframe 안에서는 위치 권한을 물어볼 수 없어
+ * 언제 봐도 같은 하늘이었다.
+ *
+ * 그래서 홈도 배경을 정하게 하고, 현재 위치를 모를 때는 이 도시로 대신한다.
+ */
+const FALLBACK_CITY_ID = 'seongnam'
+
+/**
+ * 배경이 따라갈 날씨를 정한다.
+ * 현재 위치를 알면 그곳, 모르면 기준 도시. 둘 다 없으면 건드리지 않는다.
+ */
+const applyBackdrop = (rows, near) => {
+  const city =
+    (near && rows.find((row) => row.id === near.id)) ??
+    rows.find((row) => row.id === FALLBACK_CITY_ID)
+
+  if (city) backdropStatus.value = city.status
+}
+
 /** 위치를 못 받아도 화면이 막히면 안 되므로, 실패를 null 로 돌려준다 */
 const locate = () =>
   new Promise((resolve) => {
@@ -45,6 +70,10 @@ const load = async () => {
   try {
     // 위치와 날씨는 서로를 기다릴 이유가 없다
     const [near, weather] = await Promise.all([locate(), fetchWeather()])
+
+    // 카드는 현재 위치가 있어야 뜨지만, 배경은 그렇지 않다. 먼저 채운다.
+    applyBackdrop(weather.rows, near)
+
     if (!near) {
       // 거절했거나 시간 안에 못 받았다. 다시 물어볼 수 있는 상태로 둔다.
       state.value = 'ask'
@@ -63,6 +92,10 @@ onMounted(async () => {
   const permission = await navigator.permissions?.query({ name: 'geolocation' }).catch(() => null)
   if (permission?.state === 'denied') {
     state.value = 'blocked'
+    // 카드는 못 띄우지만 배경까지 포기할 이유는 없다 — 기준 도시로 채운다
+    fetchWeather()
+      .then((weather) => applyBackdrop(weather.rows, null))
+      .catch(() => {})
     return
   }
   load()

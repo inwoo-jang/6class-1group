@@ -88,6 +88,147 @@ const logout = () => {
 </template>
 
 <style scoped>
+/*
+ * ── 내 화면의 색 ───────────────────────────────────────────────
+ *
+ * 갤러리의 공용 토큰(--card · --fg …)과 내 화면이 쓰는 토큰(--accent ·
+ * --paper · --ink …)은 이름이 다르다. 그래서 개인 저장소에서 그대로
+ * 옮겨 오면 값이 비어 회색으로 주저앉는다.
+ *
+ * 공용 assets/main.css 를 고치면 팀원 화면까지 같이 바뀌므로,
+ * 여기 .final 안에만 내 팔레트를 선언한다. CSS 변수는 자식으로
+ * 내려가므로 이 아래 화면들은 전부 개인 프로젝트와 같은 색을 쓴다.
+ *
+ * 값은 inwoo-vue/src/assets/main.css 의 editorial · terminal 테마를 따르되,
+ * 강조색만 검정으로 바꿨다. 갤러리 전체가 무채색이라 초록이 혼자 튄다.
+ */
+.final {
+  --paper: #f6f4ef;
+  --surface: #fffefb;
+  --surface-sunken: #efece4;
+
+  --ink: #16191c;
+  --ink-soft: #3d4348;
+  --muted: #6f7479;
+  --faint: #9b9f9f;
+
+  --line: #e4e0d6;
+  --line-strong: #cfcabb;
+
+  --accent: #16191c;
+  --accent-deep: #000000;
+  --accent-tint: #ecebe6;
+  --accent-line: #cfcabb;
+  --on-accent: #ffffff;
+
+  --signal: #9a5b18;
+  --signal-tint: #f7efe3;
+  --signal-line: #e3d3ba;
+
+  --slate: #3f5666;
+  --slate-deep: #26373f;
+  --slate-tint: #ecefef;
+  --slate-line: #d2d8d9;
+
+  --danger: #a63d32;
+  --danger-tint: #f8ebe8;
+
+  --radius: 6px;
+  --radius-lg: 8px;
+  --shadow: none;
+  --card-border: 1px solid var(--line);
+
+  color: var(--ink);
+}
+
+/* 어두운 화면 — 갤러리의 전환 방식(시스템 설정 · 우측 상단 토글)을 그대로 따른다 */
+@media (prefers-color-scheme: dark) {
+  .final {
+    --paper: #14181f;
+    --surface: #1b212b;
+    --surface-sunken: #232b37;
+
+    --ink: #e8edf4;
+    --ink-soft: #c2ccda;
+    --muted: #8b98a9;
+    --faint: #6c7889;
+
+    --line: #2b3543;
+    --line-strong: #3c4859;
+
+    --accent: #e8edf4;
+    --accent-deep: #ffffff;
+    --accent-tint: #232b37;
+    --accent-line: #3c4859;
+    --on-accent: #14181f;
+
+    --signal: #e8a866;
+    --signal-tint: #2a2318;
+    --signal-line: #4a3a24;
+
+    --slate: #79b8e0;
+    --slate-deep: #a5d3f0;
+    --slate-tint: #1a2530;
+    --slate-line: #2d3f4e;
+
+    --danger: #f0847a;
+    --danger-tint: #2c1d1c;
+  }
+}
+
+/* 토글로 밝게 되돌렸을 때는 시스템 설정보다 그쪽이 이긴다 */
+:root[data-theme='light'] .final {
+  --paper: #f6f4ef;
+  --surface: #fffefb;
+  --surface-sunken: #efece4;
+  --ink: #16191c;
+  --ink-soft: #3d4348;
+  --muted: #6f7479;
+  --faint: #9b9f9f;
+  --line: #e4e0d6;
+  --line-strong: #cfcabb;
+  --accent: #16191c;
+  --accent-deep: #000000;
+  --accent-tint: #ecebe6;
+  --accent-line: #cfcabb;
+  --on-accent: #ffffff;
+  --signal: #9a5b18;
+  --signal-tint: #f7efe3;
+  --signal-line: #e3d3ba;
+  --slate: #3f5666;
+  --slate-deep: #26373f;
+  --slate-tint: #ecefef;
+  --slate-line: #d2d8d9;
+  --danger: #a63d32;
+  --danger-tint: #f8ebe8;
+}
+
+:root[data-theme='dark'] .final {
+  --paper: #14181f;
+  --surface: #1b212b;
+  --surface-sunken: #232b37;
+  --ink: #e8edf4;
+  --ink-soft: #c2ccda;
+  --muted: #8b98a9;
+  --faint: #6c7889;
+  --line: #2b3543;
+  --line-strong: #3c4859;
+  --accent: #e8edf4;
+  --accent-deep: #ffffff;
+  --accent-tint: #232b37;
+  --accent-line: #3c4859;
+  --on-accent: #14181f;
+  --signal: #e8a866;
+  --signal-tint: #2a2318;
+  --signal-line: #4a3a24;
+  --slate: #79b8e0;
+  --slate-deep: #a5d3f0;
+  --slate-tint: #1a2530;
+  --slate-line: #2d3f4e;
+  --danger: #f0847a;
+  --danger-tint: #2c1d1c;
+}
+
 .final {
   position: relative;
   display: grid;
