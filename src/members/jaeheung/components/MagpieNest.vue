@@ -242,7 +242,7 @@ const dustInfo = computed(() => (props.dustGrade ? DUST_INFO[props.dustGrade] : 
   left: 0;
   right: 0;
   height: 4px;
-  background: var(--magpie-gradient);
+  background: var(--magpie-strip);
 }
 .nest-title {
   margin: 0 0 12px;

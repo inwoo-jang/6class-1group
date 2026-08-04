@@ -28,7 +28,7 @@ const configStore = useConfigStore()
 }
 .unit-btn {
   background: var(--magpie-gradient);
-  color: #fff;
+  color: var(--magpie-on-accent);
   border: none;
   border-radius: 8px;
   padding: 6px 12px;

@@ -129,8 +129,8 @@ const tempRangeClass = computed(() => {
   margin-top: 2px;
 }
 .temp-value {
-  font-size: 28px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 700;
   color: var(--color-heading);
   white-space: nowrap;
   flex-shrink: 0;

@@ -153,10 +153,10 @@ const goHome = () => {
   left: 0;
   right: 0;
   height: 4px;
-  background: var(--magpie-gradient);
+  background: var(--magpie-strip);
 }
 .panel-title {
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--color-heading);
   margin: 0 0 20px 0;
@@ -227,7 +227,7 @@ const goHome = () => {
 .back-btn {
   width: 100%;
   background: var(--magpie-gradient);
-  color: #fff;
+  color: var(--magpie-on-accent);
   border: none;
   border-radius: 10px;
   padding: 12px;

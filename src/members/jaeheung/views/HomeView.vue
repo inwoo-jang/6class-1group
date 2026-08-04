@@ -168,7 +168,7 @@ const handleAddCity = async (result) => {
 </script>
 
 <template>
-  <h1 class="page-title">날씨 알려주는 까치</h1>
+  <h1 class="page-title">WeatherCast Kkachi</h1>
 
   <div class="page-layout">
     <div class="card-panel">
@@ -293,9 +293,10 @@ const handleAddCity = async (result) => {
   width: 100%;
   margin: 0 0 28px;
   text-align: center;
-  font-size: clamp(2rem, 5vw, 4rem);
-  font-weight: 900;
-  letter-spacing: 0.05em;
+  /* 갤러리 표지 글자보다 커지지 않게 잡았다 */
+  font-size: clamp(22px, 3vw, 28px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--color-heading);
   box-sizing: border-box;
 }
@@ -336,10 +337,10 @@ const handleAddCity = async (result) => {
   left: 0;
   right: 0;
   height: 4px;
-  background: var(--magpie-gradient);
+  background: var(--magpie-strip);
 }
 .panel-title {
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--color-heading);
   margin: 0 0 6px 0;
@@ -424,7 +425,7 @@ const handleAddCity = async (result) => {
 }
 .add-city button {
   background: var(--magpie-gradient);
-  color: #fff;
+  color: var(--magpie-on-accent);
   border: none;
   border-radius: 8px;
   padding: 10px 16px;

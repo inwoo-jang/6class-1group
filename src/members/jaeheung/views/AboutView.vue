@@ -50,10 +50,10 @@ import { link } from '../routes'
   left: 0;
   right: 0;
   height: 4px;
-  background: var(--magpie-gradient);
+  background: var(--magpie-strip);
 }
 .panel-title {
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--color-heading);
   margin: 0 0 16px 0;
@@ -88,7 +88,7 @@ import { link } from '../routes'
   text-align: center;
   text-decoration: none;
   background: var(--magpie-gradient);
-  color: #fff;
+  color: var(--magpie-on-accent);
   border-radius: 10px;
   padding: 12px;
   font-size: 14px;
