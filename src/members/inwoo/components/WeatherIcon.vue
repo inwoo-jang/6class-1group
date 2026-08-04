@@ -5,7 +5,7 @@ import { computed } from 'vue'
  * 날씨 상태 문자열을 아이콘 하나로 바꿔 주는 작은 컴포넌트.
  * 데이터도 이벤트도 없고, 받은 status를 그리기만 한다.
  *
- * 아이콘은 src/assets/weather-icons/ 의 PNG를 쓴다.
+ * 아이콘은 이 폴더의 assets/weather-icons/ PNG를 쓴다.
  * import.meta.glob으로 폴더를 통째로 읽으므로,
  * 파일을 추가하면 아래 MATCH에 한 줄만 더하면 된다.
  */
@@ -15,7 +15,7 @@ const props = defineProps({
 })
 
 /** { sunny: '/assets/sunny-a1b2.png', ... } — 빌드 후 경로로 바뀐다 */
-const icons = import.meta.glob('../../../assets/weather-icons/*.png', {
+const icons = import.meta.glob('../assets/weather-icons/*.png', {
   eager: true,
   import: 'default',
 })
