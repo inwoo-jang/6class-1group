@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import WeatherIcon from '../components/WeatherIcon.vue'
 import UiIcon from '../components/UiIcon.vue'
-import { fetchWeather, nearestCity } from '../data/weatherApi'
+import { fetchWeather, nearestCity } from '../components/weatherApi'
 import { useConfigStore } from '../stores/configStore'
 import { link } from '../routes'
 

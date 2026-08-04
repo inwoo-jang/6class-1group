@@ -110,6 +110,18 @@ npm install
 npm run dev
 ```
 
+### 로그인·기록 기능을 볼 때
+
+장인우 결과물의 **기록** 메뉴는 mock 서버가 필요합니다. 창을 하나 더 열고:
+
+```bash
+npm run api        # http://localhost:3001/api
+```
+
+시험용 계정 — `student@skala.com` / `1234`
+
+서버를 안 띄워도 홈 · 날씨 · 운세는 그대로 동작합니다.
+
 ## 배포
 
 ```bash

@@ -57,7 +57,7 @@ const routes = [
   },
 ]
 
-export default createRouter({
+const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
 
@@ -69,3 +69,27 @@ export default createRouter({
     return { top: 0 }
   },
 })
+
+/**
+ * 로그인이 필요한 화면을 지키는 검문소.
+ *
+ * 갤러리는 누가 로그인했는지 모른다. 사람마다 로그인 방식이 다를 수 있으므로,
+ * "로그인했는지 확인하는 방법"은 팀원이 자기 routes.js 의 meta.auth 에 넣는다.
+ *
+ *   meta: { requiresAuth: true, auth: async () => boolean }
+ *
+ * 통과하지 못하면 그 사람의 login 화면으로 보낸다 ('<slug>.login').
+ */
+router.beforeEach(async (to) => {
+  if (!to.meta.requiresAuth) return true
+
+  const ok = typeof to.meta.auth === 'function' ? await to.meta.auth() : false
+  if (ok) return true
+
+  const slug = memberOf(to)
+  return slug
+    ? { name: `${slug}.login`, query: { redirect: to.fullPath } }
+    : { name: 'index' }
+})
+
+export default router

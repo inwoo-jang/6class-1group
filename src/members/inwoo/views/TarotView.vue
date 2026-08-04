@@ -1,7 +1,12 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue'
+import { storeToRefs } from 'pinia'
+import { ElMessage } from 'element-plus'
 import { cardBack, tarotCards } from '../data/tarotCards'
-import { SPREAD, buildReading } from '../data/tarotReading'
+import { READINGS, READING_TYPES, buildReading } from '../data/tarotReading'
+import { useAuthStore } from '../stores/authStore'
+import { useRecordStore } from '../stores/recordStore'
+import { link } from '../routes'
 
 /**
  * 오늘의 운세 — 78장에서 세 장을 뽑아 오늘의 흐름을 읽는다.
@@ -13,6 +18,27 @@ import { SPREAD, buildReading } from '../data/tarotReading'
  * 카드는 data/tarotCards.js, 해석은 data/tarotReading.js 가 맡는다.
  * 이 파일은 "무엇을 언제 보여줄지"만 정한다.
  */
+/* ── 무엇을 물을지 ──────────────────────────────────────────────── */
+
+/**
+ * 탭이 바뀌면 묻는 것 자체가 달라진다.
+ * 세 자리의 뜻도, 해석의 말투도, 서버에 저장될 종류 이름도 여기서 갈린다.
+ */
+const activeType = ref(READING_TYPES[0])
+const config = computed(() => READINGS[activeType.value])
+const spread = computed(() => config.value.spread)
+
+/**
+ * 탭을 옮기면 뽑아 둔 카드를 비운다.
+ * '오늘의 흐름' 자리에 놓았던 카드가 '다가올 인연' 자리에 그대로 남아 있으면
+ * 물음과 답이 어긋난 글이 나온다.
+ */
+const selectType = (type) => {
+  if (type === activeType.value) return
+  activeType.value = type
+  drawAgain()
+}
+
 /* ── 덱 ─────────────────────────────────────────────────────────── */
 const makeShuffledDeck = () => [...tarotCards].sort(() => Math.random() - 0.5)
 const shuffledCards = ref(makeShuffledDeck())
@@ -23,11 +49,11 @@ const isShuffling = ref(false)
 
 /** 뽑은 카드 — [{ card, reversed }, ...] 최대 세 장 */
 const picks = ref([])
-const isComplete = computed(() => picks.value.length === SPREAD.length)
+const isComplete = computed(() => picks.value.length === spread.value.length)
 const pickedIds = computed(() => new Set(picks.value.map((pick) => pick.card.id)))
 
 /** 지금 몇 번째 자리를 고르는 중인지 */
-const currentSlot = computed(() => SPREAD[picks.value.length] ?? null)
+const currentSlot = computed(() => spread.value[picks.value.length] ?? null)
 
 /**
  * 머리말 아래 안내 한 줄.
@@ -36,15 +62,18 @@ const currentSlot = computed(() => SPREAD[picks.value.length] ?? null)
  * 자리는 그대로 두고 내용만 지금 상태에 맞게 바꾼다.
  */
 const introMessage = computed(() => {
-  const left = SPREAD.length - picks.value.length
+  const left = spread.value.length - picks.value.length
 
   if (!picks.value.length) {
-    return '아래 78장 중 세 장을 고르면 오늘의 흐름 · 변수 · 조언을 읽어 드립니다.'
+    // 탭마다 세 자리의 이름이 다르므로 안내도 거기에 맞춘다
+    const labels = spread.value.map((slot) => slot.label).join(' · ')
+    return `아래 78장 중 세 장을 고르면 ${labels}을 읽어 드립니다.`
   }
   if (left > 0) {
     return `${picks.value.length}장을 골랐습니다. ${left}장을 더 고르면 해석이 시작됩니다.`
   }
-  return '세 장이 모두 놓였습니다. 아래에서 오늘의 흐름 · 변수 · 조언을 확인해 보세요.'
+  const labels = spread.value.map((slot) => slot.label).join(' · ')
+  return `세 장이 모두 놓였습니다. 아래에서 ${labels}을 확인해 보세요.`
 })
 
 const formattedDate = new Intl.DateTimeFormat('ko-KR', {
@@ -72,6 +101,7 @@ let shuffleTimer = 0
 const shuffleCards = () => {
   if (isShuffling.value) return
   isShuffling.value = true
+  resetReading()
   picks.value = []
   shuffleTimer = window.setTimeout(() => {
     shuffledCards.value = makeShuffledDeck()
@@ -83,13 +113,63 @@ const shuffleCards = () => {
 onBeforeUnmount(() => window.clearTimeout(shuffleTimer))
 
 /* ── 해석 ───────────────────────────────────────────────────────── */
+
 /**
  * 세 장이 모이면 그 자리에서 글이 나온다.
  *
  * 카드마다 가진 뜻을 놓인 자리(흐름 · 변수 · 조언)에 맞춰 엮는다.
  * 기다릴 것도, 실패할 것도 없어서 상태를 따로 들고 있지 않는다.
  */
-const readingText = computed(() => (isComplete.value ? buildReading(picks.value) : ''))
+const readingText = computed(() =>
+  isComplete.value ? buildReading(activeType.value, picks.value) : '',
+)
+
+const resetReading = () => {
+  // 새로 뽑으면 방금 저장한 기록과는 다른 운세다. 저장 표시도 함께 지운다.
+  savedRecordId.value = 0
+}
+
+/* ── 기록 남기기 ────────────────────────────────────────────────── */
+
+/**
+ * 해석이 끝나면 서버에 남길 수 있다.
+ *
+ * 기록은 "내 것"이라 로그인해야 한다. 로그인하지 않았다고 화면을 막지는 않는다 —
+ * 운세는 그대로 보고, 저장 자리에만 로그인 안내를 둔다.
+ */
+const auth = useAuthStore()
+const { isLoggedIn } = storeToRefs(auth)
+
+const recordStore = useRecordStore()
+const { isSaving } = storeToRefs(recordStore)
+
+/** 0 이면 아직 저장 전, 값이 있으면 그 기록의 id */
+const savedRecordId = ref(0)
+
+const saveReading = async () => {
+  if (!isComplete.value || !readingText.value.trim()) return
+
+  const saved = await recordStore.add({
+    // 고를 필요가 없다 — 지금 보고 있는 탭이 곧 이 기록의 종류다
+    type: activeType.value,
+    // 서버는 세 장을 그대로 보관한다. 나중에 목록에서 다시 보여 줘야 하므로
+    // 이미지 경로 대신 "무슨 카드가 어느 방향이었는지"만 담는다.
+    cards: picks.value.map((pick) => ({
+      id: pick.card.id,
+      name: pick.card.name,
+      reversed: pick.reversed,
+    })),
+    reading: readingText.value.trim(),
+  })
+
+  if (!saved) {
+    ElMessage.error(recordStore.errorMessage)
+    return
+  }
+
+  savedRecordId.value = saved.id
+  ElMessage.success({ message: '운세를 기록했습니다.', duration: 1800 })
+}
 
 const chooseCard = (card) => {
   if (isShuffling.value || isComplete.value) return
@@ -103,6 +183,7 @@ const chooseCard = (card) => {
 }
 
 const drawAgain = () => {
+  resetReading()
   picks.value = []
   shuffledCards.value = makeShuffledDeck()
   deckVersion.value += 1
@@ -113,17 +194,36 @@ const drawAgain = () => {
 <template>
   <!-- 뒷면 그림은 여러 곳에서 쓰므로 CSS 변수로 한 번만 넘겨 준다 -->
   <main class="tarot-page" :style="{ '--card-back': `url(${cardBack})` }">
+    <!--
+      무엇을 물을지 고르는 자리.
+      role="tablist" 를 적어 두면 화면 낭독기가 "3개 중 1번째 탭"처럼 읽어 준다.
+    -->
+    <nav class="kind-tabs" role="tablist" aria-label="운세 종류">
+      <button
+        v-for="type in READING_TYPES"
+        :key="type"
+        type="button"
+        role="tab"
+        :aria-selected="activeType === type"
+        :class="{ on: activeType === type }"
+        @click="selectType(type)"
+      >
+        {{ type }}
+        <small>{{ READINGS[type].tabHint }}</small>
+      </button>
+    </nav>
+
     <section class="tarot-intro">
-      <p class="tarot-eyebrow">DAILY TAROT · 3 CARD SPREAD</p>
-      <h1>오늘의 운세</h1>
-      <p>{{ formattedDate }} · 잠시 숨을 고르고, 지금 가장 궁금한 것을 떠올려 보세요.</p>
+      <p class="tarot-eyebrow">{{ config.eyebrow }}</p>
+      <h1>{{ config.heading }}</h1>
+      <p>{{ formattedDate }} · {{ config.lead }}</p>
       <p class="tarot-cta">{{ introMessage }}</p>
     </section>
 
     <!-- 세 자리 -->
     <section class="spread">
       <article
-        v-for="(slot, index) in SPREAD"
+        v-for="(slot, index) in spread"
         :key="slot.no"
         class="slot"
         :class="{ filled: picks[index], active: !picks[index] && currentSlot?.no === slot.no }"
@@ -172,6 +272,31 @@ const drawAgain = () => {
       <p class="reading-text">{{ readingText }}</p>
 
 
+
+      <div class="save-row">
+        <template v-if="!isLoggedIn">
+          <p class="save-hint">
+            <RouterLink :to="link('login')">로그인</RouterLink>하면 이 운세를 기록으로 남길 수 있습니다.
+          </p>
+        </template>
+
+        <template v-else-if="savedRecordId">
+          <p class="save-hint done">
+            기록했습니다.
+            <RouterLink :to="link('records')">내 기록에서 보기 →</RouterLink>
+          </p>
+        </template>
+
+        <template v-else>
+          <!-- 종류를 다시 고르게 하지 않는다. 지금 보고 있는 탭이 곧 그 종류다 -->
+          <p class="save-hint">
+            <b>{{ activeType }}</b> 으로 남깁니다.
+          </p>
+          <button type="button" class="save-button" :disabled="isSaving" @click="saveReading">
+            {{ isSaving ? '남기는 중…' : '이 운세 기록하기' }}
+          </button>
+        </template>
+      </div>
     </section>
 
     <!-- 카드 고르기 -->
@@ -181,7 +306,7 @@ const drawAgain = () => {
         <h2 v-if="currentSlot">{{ currentSlot.no }}번 — {{ currentSlot.title }}</h2>
         <p class="deck-guide">
           <template v-if="!picks.length">마음이 가는 카드를 골라 보세요. 정답은 없습니다.</template>
-          <template v-else>{{ SPREAD.length - picks.length }}장 남았습니다. 이어서 골라 주세요.</template>
+          <template v-else>{{ spread.length - picks.length }}장 남았습니다. 이어서 골라 주세요.</template>
         </p>
 
         <div class="tarot-deck-controls">
@@ -198,7 +323,7 @@ const drawAgain = () => {
           >
             {{ isShuffling ? '섞는 중…' : '카드 섞기' }}
           </button>
-          <span class="progress">{{ picks.length }} / {{ SPREAD.length }}</span>
+          <span class="progress">{{ picks.length }} / {{ spread.length }}</span>
         </div>
       </div>
 
@@ -327,10 +452,28 @@ h2 { font-size: 24px; line-height: 1.25; }
 @keyframes drop-right { from { transform: translate3d(0, calc(var(--order) * -3px), 0) rotate(calc(var(--order) * .6deg)); } to { transform: translate3d(-63px, calc(7.6px + var(--slot) * -1.4px), 0) rotate(-7deg); } }
 @keyframes square-up { 0%, 88% { transform: scale(1); } 94% { transform: scale(.955); } 100% { transform: scale(1); } }
 
-/* ── API 키 ── */
 
 .ghost-button { padding: 7px 14px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--surface); cursor: pointer; font: inherit; font-size: 12.5px; }
 .ghost-button:hover { border-color: var(--mystic); color: var(--mystic); }
+
+/* ── 무엇을 물을지 고르는 탭 ── */
+.kind-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.kind-tabs button { display: grid; gap: 2px; padding: 9px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--muted); cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 700; text-align: left; transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease; }
+.kind-tabs button small { color: var(--faint); font-size: 11px; font-weight: 500; }
+.kind-tabs button:hover { border-color: var(--mystic-line, var(--line)); color: var(--mystic); }
+.kind-tabs button.on { border-color: var(--mystic); background: var(--mystic); color: var(--on-accent); }
+.kind-tabs button.on small { color: inherit; opacity: 0.75; }
+
+/* ── 기록 남기기 ── */
+.save-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--mystic-line, var(--line)); }
+.save-hint { margin: 0; color: var(--muted); font-size: 12.5px; }
+.save-hint.done { color: var(--mystic); font-weight: 600; }
+.save-hint a { color: var(--mystic); font-weight: 600; }
+.save-type select { padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-soft); cursor: pointer; font: inherit; font-size: 12.5px; }
+.save-button { padding: 7px 16px; border: 1px solid var(--mystic); border-radius: 999px; background: var(--mystic); color: var(--on-accent); cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 600; }
+.save-button:disabled { opacity: 0.6; cursor: progress; }
+/* 화면 낭독기에만 읽히는 라벨 */
+.sr-only { position: absolute; overflow: hidden; width: 1px; height: 1px; clip-path: inset(50%); white-space: nowrap; }
 
 @media (max-width: 640px) {
   .spread { grid-template-columns: 1fr; }

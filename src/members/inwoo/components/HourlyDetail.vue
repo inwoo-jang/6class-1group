@@ -2,7 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import WeatherIcon from './WeatherIcon.vue'
 import UiIcon from './UiIcon.vue'
-import { fetchHourly, findCity, toDateKey, shiftDate, DATE_RANGE } from '../data/weatherApi'
+import { fetchHourly, findCity, toDateKey, shiftDate, DATE_RANGE } from './weatherApi'
 
 /**
  * 시간별 예보 패널.

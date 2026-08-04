@@ -20,9 +20,9 @@ export const MEMBERS = [
   {
     slug: 'inwoo',
     name: '장인우',
-    title: 'Weather Dashboard',
-    role: '전국 도시의 실시간 날씨를 한 화면에서',
-    stack: ['Vue Router', 'Open-Meteo', 'Composition API'],
+    title: 'Weather & Fortune',
+    role: '전국 날씨와 오늘의 운세를, 로그인하면 기록까지',
+    stack: ['Vue Router', 'Pinia', 'Axios', 'Element Plus'],
     accent: '#1f6f4a',
     live: 'https://inwoo-jang.github.io/inwoo-vue/',
   },

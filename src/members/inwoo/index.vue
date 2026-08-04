@@ -9,23 +9,51 @@
  * 주소가 바뀌면 <RouterView /> 자리만 갈아끼워진다.
  * 어떤 주소가 어떤 화면인지는 옆의 routes.js 에 적혀 있다.
  *
- * 색은 아래 <style scoped> 맨 위에서 이 영역(.final) 에만 선언한다.
- * 갤러리는 무채색이고 내 결과물은 종이+딥그린이라 토큰이 서로 다른데,
- * 전역 main.css 를 고치면 다른 조원 화면까지 물들기 때문이다.
- * 대신 테마 전환(<html data-theme>) 에는 같이 따라가도록 맞춰 두었다.
+ * 색·글꼴은 따로 선언하지 않는다. assets/main.css 의 토큰을 그대로 물려받아야
+ * 환경 설정에서 테마를 바꿨을 때 이 화면도 같이 따라온다.
  */
-import { computed } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { computed, onMounted } from 'vue'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { ElMessage } from 'element-plus'
 import WeatherBackdrop from './components/WeatherBackdrop.vue'
+import { useAuthStore } from './stores/authStore'
+import { useRecordStore } from './stores/recordStore'
 import { backdropStatus } from './data/backdropState'
 import { link } from './routes'
 
 const route = useRoute()
+const router = useRouter()
 
 /** 상세 화면에서도 '날씨' 탭이 눌린 채로 남아야 한다 */
 const isWeather = computed(() => route.name === 'inwoo.weather' || route.name === 'inwoo.detail')
 const isTarot = computed(() => route.name === 'inwoo.tarot')
-const isHome = computed(() => !isWeather.value && !isTarot.value)
+const isRecords = computed(() => route.name === 'inwoo.records')
+const isLogin = computed(() => route.name === 'inwoo.login')
+const isHome = computed(
+  () => !isWeather.value && !isTarot.value && !isRecords.value && !isLogin.value,
+)
+
+/**
+ * 로그인 상태는 내비게이션이 늘 보여 준다.
+ * 지금 누구인지 모른 채로 '기록' 탭만 덩그러니 있으면,
+ * 눌러 보고 나서야 로그인이 필요하다는 걸 알게 된다.
+ */
+const auth = useAuthStore()
+const { isLoggedIn, displayName } = storeToRefs(auth)
+const recordStore = useRecordStore()
+
+// 새로고침해도 로그인이 유지되도록, 저장해 둔 토큰이 살아 있는지 한 번 확인한다
+onMounted(() => auth.restore())
+
+const logout = () => {
+  auth.logout()
+  // 내 기록이 다음 사람 화면에 남아 있으면 안 된다
+  recordStore.clear()
+  ElMessage.success({ message: '로그아웃했습니다.', duration: 1600 })
+  // 기록 화면에 서 있었다면 그대로 둘 수 없다
+  if (route.meta.requiresAuth) router.replace(link('home'))
+}
 </script>
 
 <template>
@@ -39,7 +67,18 @@ const isHome = computed(() => !isWeather.value && !isTarot.value)
         <RouterLink :to="link('home')" :class="{ on: isHome }">홈</RouterLink>
         <RouterLink :to="link('weather')" :class="{ on: isWeather }">날씨</RouterLink>
         <RouterLink :to="link('tarot')" :class="{ on: isTarot }">운세</RouterLink>
+        <RouterLink :to="link('records')" :class="{ on: isRecords }">기록</RouterLink>
+
         <code class="url">{{ route.path }}</code>
+
+        <!-- 로그인했으면 이름과 로그아웃, 아니면 로그인 링크 -->
+        <span v-if="isLoggedIn" class="who">
+          <b>{{ displayName }}</b>
+          <button type="button" @click="logout">로그아웃</button>
+        </span>
+        <RouterLink v-else :to="link('login')" class="sign" :class="{ on: isLogin }">
+          로그인
+        </RouterLink>
       </nav>
 
       <!-- 주소에 맞는 화면이 여기 놓인다 -->
@@ -49,53 +88,6 @@ const isHome = computed(() => !isWeather.value && !isTarot.value)
 </template>
 
 <style scoped>
-/*
- * ── 장인우 개인 팔레트 ──────────────────────────────────────────────
- * 이 토큰들은 .final 안에서만 산다. 바깥(갤러리 껍데기·다른 조원 화면)은
- * 무채색 main.css 를 그대로 쓰고, 여기 들어온 순간부터 종이+딥그린이 된다.
- * 컨셉은 원본 프로젝트와 같은 Technical Editorial — 따뜻한 종이(paper) 위에
- * 근접 블랙(ink), 누를 곳만 딥그린(accent) 하나로 찍는다.
- *
- * light-dark(밝을 때, 어두울 때) 는 바로 아래 color-scheme 을 보고 고른다.
- * 그래서 값을 두 벌 적지 않고 한 줄에 나란히 둘 수 있다.
- * 밝을 때는 EDITORIAL, 어두울 때는 TERMINAL(어두운 IDE) 배색이다.
- */
-.final {
-  /* 갤러리 헤더의 테마 토글이 <html data-theme> 를 바꾸면 여기가 따라간다 */
-  color-scheme: light dark;
-
-  --paper: light-dark(#f6f4ef, #14181f);
-  --surface: light-dark(#fffefb, #1b212b);
-
-  --ink: light-dark(#16191c, #e8edf4);
-  --ink-soft: light-dark(#3d4348, #c2ccda);
-  --muted: light-dark(#6f7479, #8b98a9);
-  --faint: light-dark(#9b9f9f, #6c7889);
-
-  --line: light-dark(#e4e0d6, #2b3543);
-  --line-strong: light-dark(#cfcabb, #3c4859);
-
-  --accent: light-dark(#0f7a4e, #3ddc97);
-  --accent-tint: light-dark(#e7efe8, #1c2b28);
-  --accent-line: light-dark(#b6cfc0, #2f4a41);
-  --on-accent: light-dark(#ffffff, #0d1b16);
-
-  --signal: light-dark(#9a5b18, #e8a866);
-  --signal-tint: light-dark(#f7efe3, #2a2318);
-
-  --slate: light-dark(#3f5666, #79b8e0);
-  --slate-tint: light-dark(#ecefef, #1a2530);
-}
-
-/* 토글로 콕 집어 정했으면 OS 설정보다 그쪽이 이긴다 */
-:root[data-theme='light'] .final {
-  color-scheme: light;
-}
-
-:root[data-theme='dark'] .final {
-  color-scheme: dark;
-}
-
 .final {
   position: relative;
   display: grid;
@@ -174,8 +166,72 @@ const isHome = computed(() => !isWeather.value && !isTarot.value)
   overflow-wrap: anywhere;
 }
 
+/* ── 로그인 자리 ── */
+.who {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding-right: 6px;
+  white-space: nowrap;
+}
+
+.who b {
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+.who button {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.who button:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/*
+ * 로그인은 '어디에 있는지'가 아니라 '할 일'이라, 홈·날씨·운세처럼 꽉 채우지 않는다.
+ * 테두리만 두른 채 옆의 로그아웃 버튼과 같은 모양을 쓴다.
+ *
+ * .on 까지 함께 적어 두는 이유 —
+ * 로그인 화면에 서 있으면 위의 .nav a.on 이 배경을 초록으로 칠한다.
+ * 여기서 글자색만 바꾸면 초록 글자에 초록 배경이 되어 글자가 사라진다.
+ * (실제로 그렇게 만들어 메뉴에 구멍이 뚫린 것처럼 보였다.)
+ * 그래서 배경·글자색을 한 벌로 같이 정한다.
+ */
+.nav a.sign,
+.nav a.sign.on {
+  border: 1px solid var(--accent-line);
+  background: var(--surface);
+  color: var(--accent);
+}
+
+/* 지금 로그인 화면에 있다는 표시는 옅은 배경으로만 준다 */
+.nav a.sign.on {
+  background: var(--accent-tint);
+}
+
+.nav a.sign:hover {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
 @media (max-width: 620px) {
   .url {
+    display: none;
+  }
+
+  /* 좁은 화면에서는 이름을 접고 버튼만 남긴다 */
+  .who b {
     display: none;
   }
 }
