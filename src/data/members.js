@@ -38,7 +38,7 @@ export const MEMBERS = [
   {
     slug: 'jaeheung',
     name: '재흥',
-    title: '날씨 대시보드 (Store 실습)',
+    title: 'WeatherCast Kkachi',
     role: '도시 검색·추가와 지도가 있는 실시간 날씨 대시보드',
     stack: ['Vue Router', 'Axios', 'OpenWeatherMap', 'Leaflet'],
     accent: '#7a4a86',

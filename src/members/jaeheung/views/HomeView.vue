@@ -168,15 +168,15 @@ const handleAddCity = async (result) => {
 </script>
 
 <template>
-  <h1 class="page-title">WeatherCast Kkachi</h1>
+  <h1 class="page-title">날씨 알려주는 까치</h1>
 
   <div class="page-layout">
     <div class="card-panel">
     <p class="panel-title">
-      🌤️ 날씨 대시보드 <span class="live-dot" title="Axios + OpenWeatherMap 실시간 연동"></span>
+      날씨 대시보드 <span class="live-dot" title="Axios + OpenWeatherMap 실시간 연동"></span>
     </p>
     <div class="link-row">
-      <RouterLink :to="link('about')" class="about-link">ℹ️ 이 실습 소개</RouterLink>
+      <RouterLink :to="link('about')" class="about-link">이 실습 소개</RouterLink>
       <button
         v-if="removedDefaultIds.length > 0"
         class="restore-link"
@@ -188,14 +188,14 @@ const handleAddCity = async (result) => {
       <UnitToggler />
     </div>
     <p v-if="apiError" class="api-error">
-      ⚠️ 날씨 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+      날씨 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
     </p>
 
-    <BaseDashboardCard title="🔍 도시 검색 (한글 즉시 동기화)">
+    <BaseDashboardCard title="도시 검색">
       <SearchBar :query="searchQuery" @update-query="handleUpdateQuery" />
     </BaseDashboardCard>
 
-    <BaseDashboardCard title="➕ 도시 추가 (Axios + OpenWeatherMap 검색)">
+    <BaseDashboardCard title="도시 추가">
       <form class="add-city" @submit.prevent="searchForCity">
         <input v-model="citySearchQuery" type="text" placeholder="예: 도쿄, 뉴욕, 파리..." />
         <button type="submit" :disabled="citySearching">
@@ -219,7 +219,7 @@ const handleAddCity = async (result) => {
       </ul>
     </BaseDashboardCard>
 
-    <BaseDashboardCard title="⚙️ 필터 & 정렬">
+    <BaseDashboardCard title="필터 &amp; 정렬">
       <div class="controls">
         <div class="control-row">
           <span class="control-label">상태 필터</span>
@@ -253,7 +253,7 @@ const handleAddCity = async (result) => {
       </div>
     </BaseDashboardCard>
 
-    <BaseDashboardCard title="📍 지역별 날씨 현황">
+    <BaseDashboardCard title="지역별 날씨 현황">
       <div v-if="loading" class="loading">날씨 불러오는 중...</div>
 
       <TransitionGroup v-else name="card-list" tag="div" class="card-list">
@@ -291,10 +291,10 @@ const handleAddCity = async (result) => {
 <style scoped>
 .page-title {
   width: 100%;
-  margin: 0 0 28px;
+  margin: 0 0 22px;
   text-align: center;
   /* 갤러리 표지 글자보다 커지지 않게 잡았다 */
-  font-size: clamp(22px, 3vw, 28px);
+  font-size: clamp(20px, 2.4vw, 24px);
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--color-heading);
@@ -324,9 +324,10 @@ const handleAddCity = async (result) => {
   border: 1px solid var(--color-border);
   width: 100%;
   max-width: 800px;
-  border-radius: 18px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  padding: 28px;
+  border-radius: var(--radius, 16px);
+  /* 그림자를 걷고 가는 테두리만 남긴다. 갤러리 카드와 같은 무게가 된다 */
+  box-shadow: none;
+  padding: 26px 28px 22px;
   font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   box-sizing: border-box;
 }

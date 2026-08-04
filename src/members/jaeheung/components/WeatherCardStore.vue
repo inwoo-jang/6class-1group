@@ -66,48 +66,50 @@ const tempRangeClass = computed(() => {
 </template>
 
 <style scoped>
+/*
+ * 예전에는 한 줄 한 줄이 그림자 달린 카드였다. 그런 카드가 열 개 넘게
+ * 쌓이니 목록이 아니라 카드 더미로 보였다. 배경과 그림자를 걷고
+ * 가는 선으로만 나눈다 — 눈이 세로로 훑고 내려갈 수 있게.
+ */
 .weather-card {
   position: relative;
-  background: var(--color-background);
-  border-radius: 12px;
-  padding: 14px 40px 14px 16px;
-  margin-bottom: 10px;
   display: flex;
   gap: 16px;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 13px 34px 13px 14px;
+  border-bottom: 1px solid var(--color-border);
+  border-left: 2px solid transparent;
   cursor: pointer;
-  transition:
-    box-shadow 0.15s ease,
-    transform 0.15s ease;
-  border: 1px solid var(--color-border);
-  border-left: 5px solid transparent;
   box-sizing: border-box;
+  transition: background 0.15s ease;
+}
+.weather-card:last-of-type {
+  border-bottom: 0;
 }
 .weather-card:hover {
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
+  background: var(--magpie-accent-soft);
 }
 .weather-card.selected {
-  border-color: var(--magpie-accent);
+  border-left-color: var(--magpie-accent);
+  background: var(--magpie-accent-soft);
 }
 
+/*
+ * 기온대 구분. 갤러리가 무채색이라 빨강·파랑을 쓰면 혼자 튄다.
+ * 왼쪽 선의 진하기만 달리해서, 색 없이도 더운 줄과 추운 줄이 구별되게 했다.
+ */
 .weather-card.range-hot {
-  background: rgba(239, 91, 91, 0.1);
-  border-left-color: #ef5b5b;
+  border-left-color: color-mix(in srgb, var(--fg) 72%, transparent);
 }
 .weather-card.range-cool {
-  background: rgba(46, 134, 222, 0.1);
-  border-left-color: var(--magpie-blue);
+  border-left-color: color-mix(in srgb, var(--fg) 40%, transparent);
 }
 .weather-card.range-cold {
-  background: rgba(124, 92, 255, 0.1);
-  border-left-color: var(--magpie-violet);
+  border-left-color: color-mix(in srgb, var(--fg) 20%, transparent);
 }
 .weather-card.range-unknown {
-  background: rgba(154, 165, 177, 0.1);
-  border-left-color: #9aa5b1;
+  border-left-color: transparent;
 }
 
 .city-col {
@@ -115,8 +117,8 @@ const tempRangeClass = computed(() => {
   min-width: 0;
 }
 .city-name {
-  font-weight: 800;
-  font-size: 18px;
+  font-weight: 700;
+  font-size: 14.5px;
   color: var(--color-heading);
   white-space: nowrap;
   overflow: hidden;
@@ -129,8 +131,9 @@ const tempRangeClass = computed(() => {
   margin-top: 2px;
 }
 .temp-value {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 700;
+  font-family: var(--font-mono);
   color: var(--color-heading);
   white-space: nowrap;
   flex-shrink: 0;
