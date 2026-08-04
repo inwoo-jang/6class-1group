@@ -119,18 +119,32 @@ const dustInfo = computed(() => (props.dustGrade ? DUST_INFO[props.dustGrade] : 
 
       <g class="magpie-body-group">
         <g class="cough-wrap">
+          <!--
+            까치를 조금 더 둥글게 그렸다. 몸통보다 머리를 키우고 눈을 크게
+            잡으면 같은 새라도 훨씬 어려 보인다 — 아기 동물의 비율이다.
+          -->
           <path
             class="tail"
-            d="M100 96 L134 118 L120 122 L128 136 L112 128 L104 112 Z"
+            d="M104 100 Q128 108 138 124 Q124 124 118 130 Q114 120 102 114 Z"
             fill="url(#magpieTailGrad)"
           />
-          <ellipse cx="80" cy="112" rx="32" ry="26" fill="var(--magpie-black)" />
-          <ellipse cx="72" cy="120" rx="16" ry="13" fill="var(--magpie-white)" />
-          <circle cx="54" cy="90" r="19" fill="var(--magpie-black)" />
-          <polygon class="beak" points="38,90 28,88 38,96" fill="#f4b942" />
-          <circle cx="52" cy="86" r="3" fill="var(--magpie-white)" />
+          <ellipse cx="80" cy="114" rx="30" ry="26" fill="var(--magpie-black)" />
+          <ellipse cx="74" cy="123" rx="18" ry="14" fill="var(--magpie-white)" />
+
+          <!-- 머리 — 몸통 대비 크게 -->
+          <circle cx="52" cy="88" r="22" fill="var(--magpie-black)" />
+          <polygon class="beak" points="33,88 21,86 33,95" fill="#f0a93c" />
+
+          <!-- 눈 — 흰자 · 눈동자 · 반짝임 세 겹이라야 살아 있어 보인다 -->
+          <circle cx="46" cy="85" r="6.5" fill="var(--magpie-white)" />
+          <circle cx="45" cy="86" r="3.6" fill="#1a1a1a" />
+          <circle cx="43.4" cy="84.4" r="1.4" fill="#ffffff" />
+
+          <!-- 볼 -->
+          <ellipse cx="56" cy="97" rx="5.5" ry="3.4" fill="#e79a9a" opacity="0.5" />
+
           <g class="wing">
-            <path d="M84 100 Q100 106 92 124 Q80 118 76 106 Z" fill="var(--magpie-black)" />
+            <path d="M84 102 Q102 108 94 126 Q80 120 77 108 Z" fill="var(--magpie-sheen)" />
           </g>
           <g class="sweat" v-if="weatherState === 'hot'">
             <path d="M100 78 q4 6 0 10 a5 5 0 1 1 0 -10 Z" fill="#5aa9e6" />
@@ -162,9 +176,9 @@ const dustInfo = computed(() => (props.dustGrade ? DUST_INFO[props.dustGrade] : 
 
       <defs>
         <linearGradient id="magpieTailGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="var(--magpie-teal)" />
-          <stop offset="55%" stop-color="var(--magpie-blue)" />
-          <stop offset="100%" stop-color="var(--magpie-violet)" />
+          <!-- 까치 꼬리의 광택. 화면은 무채색이지만 그림 하나쯤은 색을 가져도 좋다 -->
+          <stop offset="0%" stop-color="var(--magpie-sheen)" />
+          <stop offset="100%" stop-color="var(--magpie-black)" />
         </linearGradient>
       </defs>
     </svg>

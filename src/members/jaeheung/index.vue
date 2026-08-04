@@ -22,10 +22,16 @@ import { RouterView } from 'vue-router'
   gap: 16px;
   width: 100%;
 
-  /* 배경 · 글자 — 갤러리의 카드 색과 글자색을 그대로 쓴다 */
-  --color-background: var(--surface);
-  --color-background-soft: var(--surface);
-  --color-background-mute: var(--card);
+  /*
+   * 패널은 바닥보다 밝아야 떠 보인다. 갤러리의 --surface 를 그대로 쓰면
+   * 바닥(--page)보다 어두워서 종이가 아니라 판때기처럼 눌려 보였다.
+   */
+  --color-background: #ffffff;
+  --color-background-soft: #ffffff;
+  --color-background-mute: color-mix(in srgb, var(--fg) 4%, transparent);
+
+  /* 까치 꼬리·날개의 광택 — 화면은 무채색이어도 그림 하나쯤은 색을 가져도 좋다 */
+  --magpie-sheen: #4a6b8a;
   --color-border: color-mix(in srgb, var(--fg) 12%, transparent);
   --color-heading: var(--fg);
   --color-text: var(--fg-muted);
@@ -42,5 +48,41 @@ import { RouterView } from 'vue-router'
   --magpie-gradient: var(--fg);
   --magpie-on-accent: var(--on-fg);
   --magpie-strip: color-mix(in srgb, var(--fg) 16%, transparent);
+}
+
+/*
+ * 어두운 화면. 갤러리는 시스템 설정과 우측 상단 토글 두 가지로 전환한다.
+ *
+ * 까치는 원래 검정인데 어두운 판 위에서는 형체가 사라진다.
+ * 그래서 어두울 때만 몸빛을 밝은 흑연색으로 뒤집는다 — 실루엣이 남는 쪽이
+ * "안 보이는 검정"보다 낫다.
+ */
+@media (prefers-color-scheme: dark) {
+  .jaeheung {
+    --color-background: #1e1e1e;
+    --color-background-soft: #1e1e1e;
+    --color-background-mute: color-mix(in srgb, var(--fg) 7%, transparent);
+    --magpie-black: #d5dae0;
+    --magpie-white: #2a2a2a;
+    --magpie-sheen: #7fa6c9;
+  }
+}
+
+:root[data-theme='light'] .jaeheung {
+  --color-background: #ffffff;
+  --color-background-soft: #ffffff;
+  --color-background-mute: color-mix(in srgb, var(--fg) 4%, transparent);
+  --magpie-black: #14161a;
+  --magpie-white: #fafafa;
+  --magpie-sheen: #4a6b8a;
+}
+
+:root[data-theme='dark'] .jaeheung {
+  --color-background: #1e1e1e;
+  --color-background-soft: #1e1e1e;
+  --color-background-mute: color-mix(in srgb, var(--fg) 7%, transparent);
+  --magpie-black: #d5dae0;
+  --magpie-white: #2a2a2a;
+  --magpie-sheen: #7fa6c9;
 }
 </style>
