@@ -1,0 +1,185 @@
+<script setup>
+/* 상세 기상관측 화면. /m/jaeheung/weather/:cityId 로 들어온다. */
+import { computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useOpenWeatherCities } from '../composables/useOpenWeatherCities'
+import { useConfigStore } from '../composables/useConfigState'
+import { link } from '../routes'
+
+const route = useRoute()
+const router = useRouter()
+const configStore = useConfigStore()
+
+const { cities, loading, loaded, error: apiError, loadCities } = useOpenWeatherCities()
+
+onMounted(loadCities)
+
+const city = computed(() => cities.value.find((c) => c.id === route.params.cityId) ?? null)
+const notFound = computed(() => loaded.value && !loading.value && !city.value)
+
+const toDisplayTemp = (rawTemp) => {
+  if (rawTemp === null || rawTemp === undefined) return null
+  if (configStore.unit === 'fahrenheit') {
+    return Math.round((rawTemp * 9) / 5 + 32)
+  }
+  return rawTemp
+}
+const displayTemp = computed(() => toDisplayTemp(city.value?.temp))
+const displayFeelsLike = computed(() => toDisplayTemp(city.value?.feelsLike))
+
+const goHome = () => {
+  router.push(link('home'))
+}
+</script>
+
+<template>
+  <div class="card-panel">
+    <div v-if="loading" class="loading">날씨 불러오는 중...</div>
+
+    <template v-else-if="city">
+      <p class="panel-title">
+        📡 {{ city.name }} 상세 기상관측 정보
+        <span class="live-dot" title="Axios + OpenWeatherMap 실시간 연동"></span>
+      </p>
+
+      <p v-if="city.temp === null" class="not-found">
+        ⚠️ 이 도시의 날씨 정보를 불러오지 못했습니다.
+      </p>
+      <div v-else class="detail-grid">
+        <div class="detail-item">
+          <span class="detail-label">현재 상태</span>
+          <span class="detail-value">{{ city.status }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">현재 기온</span>
+          <span class="detail-value">{{ displayTemp }}{{ configStore.unitSymbol }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">체감 온도</span>
+          <span class="detail-value">{{ displayFeelsLike }}{{ configStore.unitSymbol }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">습도</span>
+          <span class="detail-value">{{ city.humidity }}%</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">풍속</span>
+          <span class="detail-value">{{ city.windSpeed }}m/s</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">도시 코드</span>
+          <span class="detail-value">{{ city.id }}</span>
+        </div>
+      </div>
+    </template>
+
+    <template v-else>
+      <p v-if="apiError" class="not-found">⚠️ 날씨 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
+      <p v-else-if="notFound" class="not-found">
+        '{{ route.params.cityId }}' 도시 정보를 찾을 수 없습니다.
+      </p>
+    </template>
+
+    <button class="back-btn" @click="goHome">← 메인 대시보드로 돌아가기</button>
+  </div>
+</template>
+
+<style scoped>
+.card-panel {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  width: 100%;
+  max-width: 640px;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 28px;
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  box-sizing: border-box;
+}
+.card-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--magpie-gradient);
+}
+.panel-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-heading);
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2ecc71;
+  animation: live-pulse 1.8s infinite;
+}
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.5); }
+  70% { box-shadow: 0 0 0 7px rgba(46, 204, 113, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+}
+.loading {
+  text-align: center;
+  padding: 24px 0;
+  color: var(--color-text);
+  opacity: 0.7;
+  font-size: 14px;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.detail-item {
+  background: var(--color-background-mute);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.detail-label {
+  font-size: 12px;
+  color: var(--color-text);
+  opacity: 0.7;
+  font-weight: 600;
+}
+.detail-value {
+  font-size: 18px;
+  color: var(--color-heading);
+  font-weight: 700;
+}
+.not-found {
+  text-align: center;
+  color: #c0392b;
+  background: #fdecea;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+.back-btn {
+  width: 100%;
+  background: var(--magpie-gradient);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.back-btn:hover {
+  filter: brightness(1.08);
+}
+</style>

@@ -38,9 +38,9 @@ export const MEMBERS = [
   {
     slug: 'jaeheung',
     name: '재흥',
-    title: '',
-    role: '아직 소개가 없습니다',
-    stack: [],
+    title: '날씨 대시보드 (Store 실습)',
+    role: '도시 검색·추가와 지도가 있는 실시간 날씨 대시보드',
+    stack: ['Vue Router', 'Axios', 'OpenWeatherMap', 'Leaflet'],
     accent: '#7a4a86',
     live: '',
   },
