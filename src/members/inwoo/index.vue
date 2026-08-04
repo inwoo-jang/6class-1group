@@ -97,6 +97,13 @@ const isWeather = computed(() => route.name === 'inwoo.weather' || route.name ==
  */
 .column {
   display: grid;
+  /*
+   * minmax(0, 1fr) 이 없으면 안 되는 이유 —
+   * grid 칸은 기본이 min-width: auto 라, 시간별 예보처럼 가로로 긴 내용이
+   * 들어오면 칸이 그만큼 벌어져 max-width 를 넘어가 버린다.
+   * 0 을 최소로 못박아야 넘치는 대신 그 안에서 스크롤된다.
+   */
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: 12px;
   width: 100%;
