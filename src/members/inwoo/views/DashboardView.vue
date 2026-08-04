@@ -604,6 +604,25 @@ const showDetail = (cityName) => {
   font-weight: 600;
 }
 
+/*
+  동그란 버튼이 로딩에 들어가면 스피너 하나만 남아야 하는데,
+  Element Plus 는 내용이 사라진 자리에 빈 <span> 을 그대로 남긴다.
+  거기에 위의 gap 까지 붙으면 스피너가 그 빈 칸에 밀려 왼쪽으로 쏠린다.
+  빈 칸을 지우고 간격을 없애 한가운데에 놓는다.
+*/
+.tool-row :deep(.el-button.is-circle > span:empty) {
+  display: none;
+}
+
+.tool-row :deep(.el-button.is-circle.is-loading) {
+  gap: 0;
+}
+
+/* 스피너 자체도 글자 기준선이 아니라 버튼 한가운데를 기준으로 삼는다 */
+.tool-row :deep(.el-button.is-circle .el-icon.is-loading) {
+  margin: 0;
+}
+
 .btn-label {
   font-size: 12px;
 }
