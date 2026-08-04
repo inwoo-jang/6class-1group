@@ -1,9 +1,11 @@
 import http from 'node:http'
+import process from 'node:process'
 import { createRecord, records, resetRecords, users } from './data/stores.js'
+import { handleDongyeolRoutes } from './dongyeol/index.js'
 import { readJson, sendJson } from './utils/http.js'
 import { createToken, verifyToken } from './utils/token.js'
 
-const port = 3001
+const port = Number(process.env.API_PORT ?? 3001)
 const recordPath = /^\/api\/fortune-records\/(\d+)$/
 
 const publicUser = ({ id, email, name, role }) => ({ id, email, name, role })
@@ -28,6 +30,8 @@ const server = http.createServer(async (request, response) => {
   const match = url.pathname.match(recordPath)
 
   try {
+    if (await handleDongyeolRoutes(request, response, url)) return
+
     if (request.method === 'GET' && url.pathname === '/api/health') {
       return sendJson(response, 200, { status: 'ok', recordCount: records.length })
     }

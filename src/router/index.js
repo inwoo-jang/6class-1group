@@ -64,6 +64,9 @@ const router = createRouter({
   scrollBehavior(to, from, saved) {
     if (saved) return saved // 뒤로가기 — 보던 자리로
     if (to.hash) return { el: to.hash, behavior: 'smooth' }
+    // 팀원 모듈이 새 하위 화면의 맨 위를 원할 때만 opt-in한다.
+    // savedPosition을 먼저 처리했으므로 뒤로가기 위치는 그대로 복원된다.
+    if (to.meta.scrollToTop && to.path !== from.path) return { top: 0 }
     // 같은 사람 안에서 화면만 바뀔 때는 스크롤을 건드리지 않는다
     if (memberOf(to) && memberOf(to) === memberOf(from)) return false
     return { top: 0 }
