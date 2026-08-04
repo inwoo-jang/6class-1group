@@ -163,6 +163,8 @@ test('모든 SFC style은 scoped이고 전역 CSS는 dongyeol root 아래에 제
 
   assert.match(shellSource, /class="[^"]*\bdongyeol-app\b[^"]*"/)
   assert.doesNotMatch(cssSource, /^\s*(?::root|html|body|#app|\*)(?=\s*(?:,|\{))/gm)
+  assert.match(cssSource, /:deep\(button\)\s*\{\s*color:\s*inherit;/)
+  assert.doesNotMatch(cssSource, /\.dongyeol-app\s+:deep\(button\)\s*\{\s*color:\s*inherit;/)
 })
 
 test('화면별 동적 문서 제목은 공통 composable로 유지한다', () => {
@@ -490,6 +492,8 @@ test('현재 위치 진입 흐름은 장식 없이 한 줄 제목을 쓰는 Hero
   assert.match(panelSource, /class="location-permission-panel"/)
   assert.match(homeSource, /'is-location-prompt': locationPromptState/)
   assert.match(panelSource, /\.location-permission-panel h1\s*\{[^}]*white-space:\s*nowrap;/s)
+  assert.match(panelSource, /\.location-primary\s*\{[^}]*background:\s*var\(--hero-text\);[^}]*color:\s*var\(--hero-start\);/s)
+  assert.match(panelSource, /\.location-secondary\s*\{[^}]*background:\s*color-mix\(in srgb, var\(--hero-text\) 7%, transparent\);[^}]*color:\s*var\(--hero-text\);/s)
   assert.doesNotMatch(panelSource, /WeatherConditionIcon|location-consent-icon/)
   assert.doesNotMatch(panelSource, /role="dialog"|aria-modal|location-consent-backdrop|position:\s*fixed/)
 })

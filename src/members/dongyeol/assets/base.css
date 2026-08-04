@@ -84,7 +84,7 @@
   font: inherit;
 }
 
-.dongyeol-app :deep(button) {
+:deep(button) {
   color: inherit;
 }
 
