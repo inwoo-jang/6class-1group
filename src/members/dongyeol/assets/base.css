@@ -61,24 +61,14 @@
   --el-text-color-primary: var(--ink);
   --el-text-color-regular: var(--muted);
   --el-border-radius-base: var(--radius-control);
-}
 
-.dongyeol-app,
-.dongyeol-app *,
-.dongyeol-app *::before,
-.dongyeol-app *::after {
-  box-sizing: border-box;
-}
-
-.dongyeol-app {
   min-width: 320px;
-  background: var(--page);
-  overflow-x: clip;
-  margin: 0;
   min-height: 100vh;
   min-height: 100dvh;
-  color: var(--ink);
+  overflow-x: clip;
   background: var(--page);
+  color: var(--ink);
+  color-scheme: light;
   font-family:
     Pretendard,
     -apple-system,
@@ -90,36 +80,36 @@
   -webkit-font-smoothing: antialiased;
 }
 
-.dongyeol-app :is(button, input) {
+.dongyeol-app :deep(:is(button, input)) {
   font: inherit;
 }
 
-.dongyeol-app button {
+.dongyeol-app :deep(button) {
   color: inherit;
 }
 
-.dongyeol-app :is(button, a) {
+.dongyeol-app :deep(:is(button, a)) {
   -webkit-tap-highlight-color: transparent;
 }
 
-.dongyeol-app a {
+.dongyeol-app :deep(a) {
   text-decoration: none;
 }
 
-.dongyeol-app :is(button, input, a):focus-visible {
+.dongyeol-app :deep(:is(button, input, a):focus-visible) {
   outline: 3px solid currentcolor;
   outline-offset: 2px;
 }
 
-.dongyeol-app :is(h1, h2, h3, h4, p) {
+.dongyeol-app :deep(:is(h1, h2, h3, h4, p)) {
   margin-top: 0;
 }
 
-.dongyeol-app strong {
+.dongyeol-app :deep(strong) {
   font-weight: 750;
 }
 
-.dongyeol-app .sr-only {
+.dongyeol-app :deep(.sr-only) {
   position: absolute;
   width: 1px;
   height: 1px;

@@ -4,6 +4,7 @@ export { MissingWeatherApiKeyError } from './weatherErrors.js'
 
 const API_URL = 'https://api.openweathermap.org/data/2.5/weather'
 const FORECAST_API_URL = 'https://api.openweathermap.org/data/2.5/forecast'
+const REVERSE_GEOCODING_API_URL = 'https://api.openweathermap.org/geo/1.0/reverse'
 const OPEN_METEO_API_URL = 'https://api.open-meteo.com/v1/forecast'
 
 const finiteNumberOrNull = (value) => (Number.isFinite(value) ? value : null)
@@ -12,14 +13,41 @@ const nonEmptyStringOrNull = (value) => {
   const normalized = value.trim()
   return normalized || null
 }
+const getCountryName = (countryCode) => {
+  if (!countryCode) return null
+
+  try {
+    return new Intl.DisplayNames(['ko'], { type: 'region' }).of(countryCode) ?? countryCode
+  } catch {
+    return countryCode
+  }
+}
+const stripRomanizedKoreanSuffix = (value) => value.replace(/(?:[-\s](?:si|gun|gu|do))$/i, '').trim()
+const resolveCurrentLocationName = (payload, locationPayload, countryCode) => {
+  const englishName = nonEmptyStringOrNull(locationPayload?.local_names?.en) || nonEmptyStringOrNull(locationPayload?.name) || nonEmptyStringOrNull(payload?.name)
+  if (!englishName) return null
+  return countryCode === 'KR' ? stripRomanizedKoreanSuffix(englishName) : englishName
+}
 const FORECAST_ITEM_LIMIT = 8
 const DAILY_FORECAST_LIMIT = 5
 const SECONDS_PER_DAY = 24 * 60 * 60
 const LOCAL_NOON_SECONDS = 12 * 60 * 60
 const OPEN_METEO_HOURLY_STEP = 3
+export const WEATHER_LIST_CONCURRENCY = 6
 
 const OPEN_METEO_CURRENT_FIELDS = ['temperature_2m', 'apparent_temperature', 'relative_humidity_2m', 'surface_pressure', 'pressure_msl', 'wind_speed_10m', 'weather_code', 'is_day'].join(',')
-const OPEN_METEO_HOURLY_FIELDS = ['temperature_2m', 'apparent_temperature', 'relative_humidity_2m', 'precipitation_probability', 'rain', 'snowfall', 'wind_speed_10m', 'weather_code', 'is_day', 'visibility'].join(',')
+const OPEN_METEO_HOURLY_FIELDS = [
+  'temperature_2m',
+  'apparent_temperature',
+  'relative_humidity_2m',
+  'precipitation_probability',
+  'rain',
+  'snowfall',
+  'wind_speed_10m',
+  'weather_code',
+  'is_day',
+  'visibility',
+].join(',')
 const OPEN_METEO_DAILY_FIELDS = ['weather_code', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_probability_max', 'sunrise', 'sunset'].join(',')
 
 const WMO_CONDITIONS = Object.freeze({
@@ -195,11 +223,22 @@ export const hasWeatherApiKey = () => isUsableWeatherApiKey(getWeatherApiKey())
 // Open-Meteo에는 공개 클라이언트용 API 키가 필요하지 않으므로 날씨 요청은 항상 시도할 수 있습니다.
 export const isWeatherServiceReady = () => true
 
-export const mapWeatherResponse = (city, payload = {}) => {
+export const mapWeatherResponse = (city, payload = {}, locationPayload = {}) => {
   const currentCondition = payload?.weather?.[0]
+  const resolvedCountryCode = city?.isCurrentLocation ? nonEmptyStringOrNull(locationPayload?.country) || nonEmptyStringOrNull(payload?.sys?.country) : null
+  const resolvedLocationName = city?.isCurrentLocation ? resolveCurrentLocationName(payload, locationPayload, resolvedCountryCode) : null
+  const resolvedCountryName = getCountryName(resolvedCountryCode)
 
   return {
     ...city,
+    ...(resolvedLocationName
+      ? {
+          name: resolvedLocationName,
+          displayName: resolvedLocationName.toLocaleUpperCase('en-US'),
+          fullName: `내 위치 · ${resolvedLocationName}`,
+        }
+      : {}),
+    ...(resolvedCountryCode ? { countryCode: resolvedCountryCode, countryName: resolvedCountryName } : {}),
     temp: finiteNumberOrNull(payload?.main?.temp),
     feelsLike: finiteNumberOrNull(payload?.main?.feels_like),
     humidity: finiteNumberOrNull(payload?.main?.humidity),
@@ -347,7 +386,7 @@ const fetchOpenMeteoPayload = (city) => {
 }
 
 const fetchOpenWeatherCurrent = async (city, apiKey) => {
-  const response = await axios.get(API_URL, {
+  const requestOptions = {
     params: {
       lat: city.latitude,
       lon: city.longitude,
@@ -356,9 +395,25 @@ const fetchOpenWeatherCurrent = async (city, apiKey) => {
       lang: 'kr',
     },
     timeout: 8000,
-  })
+  }
+  const weatherRequest = axios.get(API_URL, requestOptions)
+  const locationRequest = city?.isCurrentLocation
+    ? axios
+        .get(REVERSE_GEOCODING_API_URL, {
+          params: {
+            lat: city.latitude,
+            lon: city.longitude,
+            limit: 1,
+            appid: apiKey,
+          },
+          timeout: 8000,
+        })
+        .catch(() => null)
+    : Promise.resolve(null)
 
-  return mapWeatherResponse(city, response.data)
+  const [response, locationResponse] = await Promise.all([weatherRequest, locationRequest])
+
+  return mapWeatherResponse(city, response.data, locationResponse?.data?.[0])
 }
 
 const fetchOpenWeatherForecast = async (city, apiKey) => {
@@ -407,7 +462,24 @@ export const fetchCityForecast = async (city, apiKey = getWeatherApiKey()) => {
 }
 
 export const fetchWeatherList = async (cities, fetchWeather = fetchCityWeather, onComplete) => {
-  const results = await Promise.allSettled(cities.map(fetchWeather))
+  const results = Array.from({ length: cities.length })
+  let nextCityIndex = 0
+
+  const runWorker = async () => {
+    while (nextCityIndex < cities.length) {
+      const cityIndex = nextCityIndex
+      nextCityIndex += 1
+
+      try {
+        results[cityIndex] = { status: 'fulfilled', value: await fetchWeather(cities[cityIndex]) }
+      } catch (reason) {
+        results[cityIndex] = { status: 'rejected', reason }
+      }
+    }
+  }
+
+  const workerCount = Math.min(WEATHER_LIST_CONCURRENCY, cities.length)
+  await Promise.all(Array.from({ length: workerCount }, runWorker))
   const successfulCities = results.filter((result) => result.status === 'fulfilled').map((result) => result.value)
   const failedCount = results.length - successfulCities.length
 

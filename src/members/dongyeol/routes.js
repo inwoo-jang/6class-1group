@@ -55,12 +55,12 @@ export default [
     path: '404',
     name: 'not-found',
     component: () => import('./views/NotFoundView.vue'),
-    meta: { title: '페이지를 찾을 수 없음', scrollToTop: true },
+    meta: { title: '페이지를 찾을 수 없음', layout: 'weather-scene', scrollToTop: true },
   },
   {
     path: ':pathMatch(.*)*',
     name: 'missing',
     component: () => import('./views/NotFoundView.vue'),
-    meta: { title: '페이지를 찾을 수 없음', scrollToTop: true },
+    meta: { title: '페이지를 찾을 수 없음', layout: 'weather-scene', scrollToTop: true },
   },
 ]

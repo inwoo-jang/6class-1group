@@ -2,14 +2,16 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 
 import { CITY_CONFIG } from '@/members/dongyeol/data/cities'
-import { fetchWeatherList, isWeatherServiceReady } from '@/members/dongyeol/services/weatherApi'
+import { CURRENT_LOCATION_ID } from '@/members/dongyeol/services/geolocation'
+import { fetchCityWeather, fetchWeatherList, isWeatherServiceReady, MissingWeatherApiKeyError } from '@/members/dongyeol/services/weatherApi'
 import { getWeatherRequestErrorMessage, HOME_MISSING_WEATHER_API_KEY_MESSAGE } from '@/members/dongyeol/services/weatherErrors'
 import { useHomeWeatherStore } from '@/members/dongyeol/stores/homeWeatherStore'
+import { formatKoreanSelectionMessage } from '@/members/dongyeol/utils/koreanGrammar'
 
 export const useHomeWeatherDashboard = (getRouteSelectedCityId) => {
   const apiReady = isWeatherServiceReady()
   const homeWeatherStore = useHomeWeatherStore()
-  const { weatherList, selectedCityId, lastUpdated, isCityListOpen } = storeToRefs(homeWeatherStore)
+  const { weatherList, selectedCityId, lastUpdated, isWorldDrawerOpen } = storeToRefs(homeWeatherStore)
   const selectedCityInfo = ref(apiReady ? '도시 카드를 선택해 보세요.' : '날씨 데이터를 표시할 수 없습니다.')
   const isLoading = ref(apiReady && !homeWeatherStore.hasFreshWeather())
   const errorMessage = ref(apiReady ? '' : HOME_MISSING_WEATHER_API_KEY_MESSAGE)
@@ -35,6 +37,8 @@ export const useHomeWeatherDashboard = (getRouteSelectedCityId) => {
     const activeRequestId = ++requestId
     const routeSelectedCityId = getRouteSelectedCityId()
     const previousSelectedCityId = routeSelectedCityId || selectedCityId.value
+    const currentLocation = weatherList.value.find((city) => city.isCurrentLocation)
+    const citiesToLoad = currentLocation ? [currentLocation, ...CITY_CONFIG] : CITY_CONFIG
 
     if (!apiReady) {
       homeWeatherStore.clearWeatherData()
@@ -51,7 +55,7 @@ export const useHomeWeatherDashboard = (getRouteSelectedCityId) => {
     selectedCityInfo.value = '날씨 데이터를 갱신하는 중입니다.'
 
     try {
-      const nextWeatherList = await fetchWeatherList(CITY_CONFIG, undefined, ({ failedCount }) => {
+      const nextWeatherList = await fetchWeatherList(citiesToLoad, undefined, ({ failedCount }) => {
         if (activeRequestId === requestId) failedCityCount.value = failedCount
       })
       if (activeRequestId !== requestId) return
@@ -82,14 +86,52 @@ export const useHomeWeatherDashboard = (getRouteSelectedCityId) => {
   const initializeWeather = () => {
     if (apiReady && homeWeatherStore.hasFreshWeather()) {
       restoreCachedWeather()
-      return
+      return Promise.resolve()
     }
-    void loadWeather()
+    return loadWeather()
+  }
+
+  const loadCurrentLocation = async ({ latitude, longitude }) => {
+    if (!apiReady) throw new MissingWeatherApiKeyError()
+
+    const activeRequestId = ++requestId
+    const locationConfig = {
+      id: CURRENT_LOCATION_ID,
+      name: '현재 위치',
+      fullName: '내 위치',
+      countryCode: '',
+      countryName: '현재 위치',
+      region: 'current',
+      latitude,
+      longitude,
+      isCurrentLocation: true,
+    }
+
+    isLoading.value = true
+    errorMessage.value = ''
+    selectedCityInfo.value = '현재 위치의 날씨를 확인하고 있습니다.'
+
+    try {
+      const currentWeather = await fetchCityWeather(locationConfig)
+      if (activeRequestId !== requestId) return null
+
+      weatherList.value = [currentWeather, ...weatherList.value.filter((city) => !city.isCurrentLocation)]
+      selectedCityId.value = CURRENT_LOCATION_ID
+      selectedCityInfo.value = `${currentWeather.name} 현재 위치 날씨를 표시하고 있습니다.`
+      lastUpdated.value = new Intl.DateTimeFormat('ko-KR', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(new Date())
+      homeWeatherStore.markWeatherLoaded()
+      return currentWeather
+    } finally {
+      if (activeRequestId === requestId) isLoading.value = false
+    }
   }
 
   const selectCity = (city) => {
     selectedCityId.value = city.id
-    selectedCityInfo.value = `${city.name}이 선택되었습니다.`
+    selectedCityInfo.value = formatKoreanSelectionMessage(city.displayName || city.name, city.name)
   }
 
   onBeforeUnmount(() => {
@@ -101,9 +143,10 @@ export const useHomeWeatherDashboard = (getRouteSelectedCityId) => {
     errorMessage,
     failedCityCount,
     initializeWeather,
-    isCityListOpen,
+    isWorldDrawerOpen,
     isLoading,
     lastUpdated,
+    loadCurrentLocation,
     loadWeather,
     selectedCityId,
     selectedCityInfo,

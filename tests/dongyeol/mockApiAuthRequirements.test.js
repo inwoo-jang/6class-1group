@@ -131,11 +131,24 @@ test('동열 Axios client는 전용 base URL과 저장된 JWT Bearer 헤더를 �
   assert.doesNotMatch(httpSource, /VITE_API_BASE_URL/)
 })
 
-test('대시보드 route는 팀 Router의 meta.auth 계약으로 보호된다', () => {
+test('인증 화면에서 제거한 보호 메시지 client 상태와 서버·브라우저 fallback 계약을 구분한다', () => {
+  const authApiSource = readSource('../../src/members/dongyeol/api/authApi.js')
+  const authStoreSource = readSource('../../src/members/dongyeol/stores/auth.js')
+  const browserFallbackSource = readSource('../../src/members/dongyeol/api/browserFallback.js')
+  const authRouteSource = readSource('../../mock-api/dongyeol/routes/authRoutes.js')
+
+  assert.doesNotMatch(authApiSource, /getProtectedMessage/)
+  assert.doesNotMatch(authStoreSource, /protectedMessage|authorizationHeader|tokenPayload|fetchProtectedMessage|decodeJwtPayload/)
+  assert.match(browserFallbackSource, /getProtectedMessage\(accessToken\)/)
+  assert.match(authRouteSource, /auth\/protected-message/)
+})
+
+test('대시보드는 팀 인증 보호 경로이며 로그인 후 상품·게시글 탭을 제공한다', () => {
   const routeSource = readSource('../../src/members/dongyeol/routes.js')
   const dashboardSource = readSource('../../src/members/dongyeol/views/DashboardView.vue')
 
-  assert.match(routeSource, /path:\s*'dashboard'[\s\S]*name:\s*'dashboard'[\s\S]*requiresAuth:\s*true/)
+  assert.match(routeSource, /path:\s*'dashboard'[\s\S]*requiresAuth:\s*true/)
+  assert.match(routeSource, /path:\s*'login'[\s\S]*LoginView\.vue/)
   assert.match(routeSource, /auth:\s*(?:async\s*)?\(/)
   assert.match(dashboardSource, /<ProductManager/)
   assert.match(dashboardSource, /<PostManager/)
@@ -144,52 +157,104 @@ test('대시보드 route는 팀 Router의 meta.auth 계약으로 보호된다', 
   assert.match(dashboardSource, /user\?\.email/)
   assert.match(dashboardSource, /user\?\.role/)
   assert.match(dashboardSource, /@click="logout"/)
+  assert.doesNotMatch(dashboardSource, /Decoded payload|Raw access token|Authorization header|보호 API 확인/)
 })
 
-test('하단 내비게이션은 날씨·대시보드·로그인·소개 순서다', () => {
+test('하단 내비게이션은 인증 상태에 따라 로그인과 대시보드를 한 자리에서 전환한다', () => {
   const shellSource = readSource('../../src/members/dongyeol/index.vue')
-  const labels = ['<span>날씨</span>', '<span>대시보드</span>', '<span>로그인</span>', '<span>소개</span>']
-  const indexes = labels.map((label) => shellSource.indexOf(label))
 
-  assert.ok(indexes.every((index) => index >= 0))
-  assert.deepEqual(
-    indexes,
-    [...indexes].sort((first, second) => first - second),
-  )
+  assert.match(shellSource, /const \{ isLoggedIn \} = storeToRefs\(authStore\)/)
+  assert.match(shellSource, /const accountNavigation = computed/)
+  assert.match(shellSource, /label:\s*'대시보드'/)
+  assert.match(shellSource, /label:\s*'로그인'/)
+  assert.equal((shellSource.match(/<RouterLink/g) ?? []).length, 3)
+  assert.match(shellSource, /grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/)
+  assert.match(shellSource, /width:\s*calc\(\(100% - 6px\) \/ 3\)/)
 })
 
-test('내비게이션 화면은 선택한 날씨의 동적 테마를 공유한다', () => {
+test('내비게이션 화면은 선택한 날씨의 동적 테마와 장면 규칙을 공유한다', () => {
   const loginSource = readSource('../../src/members/dongyeol/views/LoginView.vue')
   const dashboardSource = readSource('../../src/members/dongyeol/views/DashboardView.vue')
   const aboutSource = readSource('../../src/members/dongyeol/views/WeatherAboutView.vue')
+  const sceneSource = readSource('../../src/members/dongyeol/components/common/WeatherScene.vue')
   const sharedThemeSource = readSource('../../src/members/dongyeol/composables/useSharedWeatherTheme.js')
 
   for (const source of [loginSource, dashboardSource, aboutSource]) {
-    assert.match(source, /useSharedWeatherTheme/)
-    assert.match(source, /:data-theme="\w+Theme\.name"/)
-    assert.match(source, /var\(--hero-start\)/)
-    assert.match(source, /var\(--hero-end\)/)
-    assert.match(source, /var\(--weather-accent\)/)
+    assert.match(source, /import WeatherScene/)
+    assert.match(source, /<WeatherScene/)
+    assert.match(source, /letter-spacing:\s*-0\.0(?:5|6)/)
+    assert.match(source, /backdrop-filter:\s*blur\(/)
+    assert.doesNotMatch(source, /#102f2b|#1b7765|#11322c|#1a5548/)
   }
 
+  assert.match(sceneSource, /useSharedWeatherTheme/)
+  assert.match(sceneSource, /:style="activeTheme\.cssVariables"/)
+  assert.match(sceneSource, /:data-theme="activeTheme\.name"/)
+  assert.match(sceneSource, /linear-gradient\(158deg, var\(--hero-start\)/)
+  assert.match(sceneSource, /backdrop-filter|filter:\s*blur\(/)
   assert.match(sharedThemeSource, /weatherList\.value\.find/)
   assert.match(sharedThemeSource, /weather\.id === selectedCityId\.value/)
-  assert.match(sharedThemeSource, /getWeatherTheme\(selectedWeather\.value\)/)
+  assert.match(sharedThemeSource, /activeSceneTheme\.value \?\? getWeatherTheme\(selectedWeather\.value\)/)
+  assert.match(sharedThemeSource, /setActiveSceneWeatherTheme/)
+
+  for (const state of ['clouds', 'rain', 'thunderstorm', 'snow', 'mist']) {
+    assert.match(sceneSource, new RegExp(`data-theme='${state}'`))
+  }
 })
 
-test('삭제와 전체 초기화는 접근 가능한 공통 확인창을 사용한다', () => {
+test('로그인과 대시보드는 설명용 랜딩 없이 실제 조작 화면을 바로 제공한다', () => {
+  const loginSource = readSource('../../src/members/dongyeol/views/LoginView.vue')
+  const dashboardSource = readSource('../../src/members/dongyeol/views/DashboardView.vue')
+
+  assert.match(loginSource, /return null/)
+  assert.match(loginSource, /name="email"/)
+  assert.match(loginSource, /name="password"/)
+  assert.match(loginSource, /:aria-busy="authStore\.isLoading"/)
+  assert.match(loginSource, /<span>콘텐츠 운영<\/span>\s*<h1 id="login-title">로그인<\/h1>/)
+  assert.doesNotMatch(loginSource, /FlowSteps|JWT 로그인 처리 흐름|실습을 시작합니다|login-mark|관리 계정으로 계속하세요/)
+
+  assert.match(dashboardSource, /const healthState = ref\('checking'\)/)
+  assert.match(dashboardSource, /'API 연결됨'/)
+  assert.match(dashboardSource, /'API 연결 실패'/)
+  assert.match(dashboardSource, /<section class="api-section"/)
+  assert.doesNotMatch(dashboardSource, /labEntry|moveToLab|API 실습을 시작해 볼까요/)
+})
+
+test('상품과 게시글 탭은 같은 collection 화면과 맞춤형 select를 사용한다', () => {
+  const productSource = readSource('../../src/members/dongyeol/components/mock/ProductManager.vue')
+  const postSource = readSource('../../src/members/dongyeol/components/mock/PostManager.vue')
+  const collectionStyles = readSource('../../src/members/dongyeol/assets/collection-manager.css')
+
+  for (const source of [productSource, postSource]) {
+    assert.match(source, /workspace-intro/)
+    assert.match(source, /workspace-layout/)
+    assert.match(source, /editor-panel/)
+    assert.match(source, /collection-panel/)
+    assert.match(source, /var\(--hero-muted\)/)
+    assert.doesNotMatch(source, /method-badge|panel--form|panel--content/)
+  }
+
+  assert.match(collectionStyles, /\.filter-strip select,\s*\.editor-form select\s*\{[^}]*appearance:\s*none;[^}]*background-image:/s)
+  assert.match(collectionStyles, /background-position:[^;]*calc\(100% - 16px\)[^;]*calc\(100% - 11px\)/s)
+})
+
+test('삭제와 전체 초기화는 기본 confirm 대신 접근 가능한 공통 확인창과 보이는 danger 상태를 사용한다', () => {
   const dashboardSource = readSource('../../src/members/dongyeol/views/DashboardView.vue')
   const productSource = readSource('../../src/members/dongyeol/components/mock/ProductManager.vue')
   const postSource = readSource('../../src/members/dongyeol/components/mock/PostManager.vue')
   const dialogSource = readSource('../../src/members/dongyeol/components/common/ConfirmDialog.vue')
+  const collectionStyles = readSource('../../src/members/dongyeol/assets/collection-manager.css')
 
   for (const source of [dashboardSource, productSource, postSource]) {
     assert.match(source, /<ConfirmDialog/)
     assert.doesNotMatch(source, /window\.confirm/)
   }
 
+  assert.match(dialogSource, /useSharedWeatherTheme/)
   assert.match(dialogSource, /role="alertdialog"/)
   assert.match(dialogSource, /aria-modal="true"/)
   assert.match(dialogSource, /event\.key === 'Escape'/)
   assert.match(dialogSource, /previouslyFocusedElement/)
+  assert.match(dashboardSource, /\.reset-button\s*\{[^}]*border:[^;]*#98524b[^;]*;[^}]*background:[^;]*#98524b[^;]*;[^}]*color:/s)
+  assert.match(collectionStyles, /\.row-actions button:last-child\s*\{[^}]*border-color:[^;]*#a96861[^;]*;[^}]*background:[^;]*#a96861[^;]*;[^}]*color:/s)
 })

@@ -3,11 +3,14 @@ import { computed, onBeforeUnmount, ref, toValue, watch } from 'vue'
 import { findCityConfig } from '@/members/dongyeol/data/cities'
 import { fetchCityForecast, fetchCityWeather, isWeatherServiceReady } from '@/members/dongyeol/services/weatherApi'
 import { getWeatherRequestErrorMessage, MISSING_WEATHER_API_KEY_MESSAGE } from '@/members/dongyeol/services/weatherErrors'
+import { useHomeWeatherStore } from '@/members/dongyeol/stores/homeWeatherStore'
 import { getWeatherTheme } from '@/members/dongyeol/utils/weatherTheme'
 
 export const useCityWeatherDetail = (cityIdSource, redirectUnknownCity) => {
   const apiReady = isWeatherServiceReady()
-  const cityConfig = computed(() => findCityConfig(toValue(cityIdSource)))
+  const homeWeatherStore = useHomeWeatherStore()
+  const resolveCityConfig = (cityId) => findCityConfig(cityId) ?? homeWeatherStore.weatherList.find((city) => city.id === cityId && city.isCurrentLocation)
+  const cityConfig = computed(() => resolveCityConfig(toValue(cityIdSource)))
   const cityData = ref(null)
   const forecastData = ref(null)
   const isLoading = ref(apiReady)
@@ -111,7 +114,7 @@ export const useCityWeatherDetail = (cityIdSource, redirectUnknownCity) => {
 
   watch(
     () => toValue(cityIdSource),
-    (cityId) => void loadDetail(findCityConfig(cityId)),
+    (cityId) => void loadDetail(resolveCityConfig(cityId)),
     { immediate: true },
   )
 

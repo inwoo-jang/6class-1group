@@ -4,7 +4,8 @@ import { computed } from 'vue'
 import TemperatureConditionLabel from '@/members/dongyeol/components/weather/TemperatureConditionLabel.vue'
 import WeatherConditionIcon from '@/members/dongyeol/components/weather/WeatherConditionIcon.vue'
 import { useTemperature } from '@/members/dongyeol/composables/useTemperature'
-import { getWeatherTheme } from '@/members/dongyeol/utils/weatherTheme'
+import { getCountryFlagEmoji } from '@/members/dongyeol/utils/countryFlag'
+import { formatWeatherTime, getWeatherTheme } from '@/members/dongyeol/utils/weatherTheme'
 
 const props = defineProps({
   cityItem: {
@@ -32,6 +33,9 @@ const emit = defineEmits({
 const { displayTemp, unitSymbol } = useTemperature(() => props.cityItem.temp)
 const hasTemperature = computed(() => Number.isFinite(props.cityItem.temp))
 const weatherTheme = computed(() => getWeatherTheme(props.cityItem))
+const localTime = computed(() => formatWeatherTime(props.cityItem.observedAt, props.cityItem.timezoneOffset))
+const cityDisplayName = computed(() => props.cityItem.displayName || props.cityItem.name)
+const countryFlag = computed(() => getCountryFlagEmoji(props.cityItem.countryCode))
 
 const handleCardSelect = () => {
   emit('select-card', props.cityItem)
@@ -45,14 +49,20 @@ const handleDetailClick = () => {
 <template>
   <div class="weather-card-hover-zone" :style="{ viewTransitionName: promoting ? 'weather-promotion' : undefined }">
     <article class="weather-card dashboard-surface dashboard-surface--weather" :class="{ 'is-selected': selected, 'is-promoting': promoting }">
-      <button class="card-select" type="button" :aria-label="`${cityItem.name} 날씨를 메인 화면으로 보기`" @click="handleCardSelect">
-        <span class="weather-mark" aria-hidden="true">
-          <WeatherConditionIcon :category="weatherTheme.category" :is-night="weatherTheme.isNight" />
+      <button class="card-select" type="button" :aria-label="`${cityDisplayName} 날씨를 메인 화면으로 보기`" @click="handleCardSelect">
+        <span class="city-copy">
+          <span class="city-name">
+            <span v-if="countryFlag" class="country-flag" aria-hidden="true">
+              <span class="country-flag-glyph">{{ countryFlag }}</span>
+            </span>
+            <span class="city-name-text">{{ cityDisplayName }}</span>
+          </span>
+          <span v-if="cityItem.name" class="city-meta">{{ cityItem.name }} · 현지 {{ localTime }}</span>
+          <span class="condition">{{ cityItem.status || weatherTheme.label || '날씨 설명 없음' }}</span>
         </span>
 
-        <span class="city-copy">
-          <span class="city-name">{{ cityItem.name }}</span>
-          <span class="condition">{{ cityItem.status || weatherTheme.label || '날씨 설명 없음' }}</span>
+        <span class="weather-mark" aria-hidden="true">
+          <WeatherConditionIcon :category="weatherTheme.category" :is-night="weatherTheme.isNight" />
         </span>
 
         <span class="temperature-stack">
@@ -64,8 +74,8 @@ const handleDetailClick = () => {
         </span>
       </button>
 
-      <button class="detail-button" type="button" :aria-label="`${cityItem.name} 상세 날씨 페이지로 이동`" @click.stop="handleDetailClick">
-        <span>상세 보기</span>
+      <button class="detail-button" type="button" :aria-label="`${cityDisplayName} 상세 날씨 페이지로 이동`" @click.stop="handleDetailClick">
+        <span class="sr-only">상세 보기</span>
         <svg viewBox="0 0 20 20" aria-hidden="true">
           <path d="m7 4 6 6-6 6" />
         </svg>
@@ -77,16 +87,16 @@ const handleDetailClick = () => {
 <style scoped>
 .weather-card-hover-zone {
   min-width: 0;
-  min-height: 164px;
+  min-height: 100px;
 }
 
 .weather-card {
   position: relative;
   display: grid;
   min-width: 0;
-  min-height: 164px;
+  min-height: 100px;
   height: 100%;
-  grid-template-rows: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) 44px;
   overflow: hidden;
   transition:
     transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -114,12 +124,12 @@ const handleDetailClick = () => {
 .card-select {
   display: grid;
   min-width: 0;
-  min-height: 108px;
+  min-height: 100px;
   width: 100%;
-  grid-template-columns: 52px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) 38px auto;
   align-items: center;
-  gap: 14px;
-  padding: 16px 18px 8px;
+  gap: clamp(9px, 1.8vw, 14px);
+  padding: 12px 4px 12px 16px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -136,9 +146,9 @@ const handleDetailClick = () => {
 }
 
 .weather-mark {
-  width: 52px;
-  height: 52px;
-  padding: 2px;
+  width: 38px;
+  height: 38px;
+  padding: 1px;
   border: 0;
   background: transparent;
   color: var(--weather-accent, currentcolor);
@@ -148,33 +158,82 @@ const handleDetailClick = () => {
 }
 
 .city-copy {
+  display: block;
   min-width: 0;
 }
 
+.city-copy > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .city-name {
-  display: block;
-  margin: 0 0 4px;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 3px;
   color: inherit;
-  font-size: 17px;
+  font-size: clamp(14px, 2.4vw, 17px);
   font-weight: 850;
+}
+
+.country-flag {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--hero-text, currentcolor) 16%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, white 12%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, white 26%, transparent);
+}
+
+.country-flag-glyph {
+  display: block;
+  font-size: 16px;
+  line-height: 1;
+  transform: scale(1.38);
+}
+
+.city-name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .condition {
   display: block;
   margin: 0;
   color: var(--hero-muted, var(--muted));
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: clamp(10px, 1.8vw, 12px);
+}
+
+.city-meta {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--hero-muted, var(--muted));
+  font-size: 9px;
+  font-weight: 780;
+  letter-spacing: 0.02em;
 }
 
 .temperature-stack {
   display: grid;
   min-width: 0;
   justify-items: end;
-  gap: 8px;
+  gap: 6px;
   align-self: center;
+}
+
+.temperature-stack :deep(.temperature-condition) {
+  --temperature-condition-font-size: 9px;
+  --temperature-condition-icon-size: 11px;
 }
 
 .temperature {
@@ -188,20 +247,19 @@ const handleDetailClick = () => {
 }
 
 .temperature strong {
-  font-size: clamp(32px, 3.6vw, 38px);
+  font-size: clamp(27px, 4.2vw, 34px);
   font-variant-numeric: tabular-nums;
   line-height: 0.94;
   letter-spacing: -0.035em;
 }
 
 .temperature strong.missing {
-  max-width: 72px;
   color: var(--hero-muted, var(--muted));
-  font-size: 13px;
+  font-size: 11px;
   letter-spacing: -0.02em;
   line-height: 1.3;
   text-align: right;
-  white-space: normal;
+  white-space: nowrap;
 }
 
 .temperature span {
@@ -212,22 +270,19 @@ const handleDetailClick = () => {
 }
 
 .detail-button {
-  display: inline-flex;
+  display: grid;
+  width: 44px;
+  height: 100%;
   align-items: center;
-  justify-content: flex-end;
-  justify-self: end;
-  gap: 4px;
-  min-width: 0;
-  min-height: 44px;
-  margin: 0 10px 6px;
-  padding: 0 9px;
+  justify-content: center;
+  min-height: 100px;
+  margin: 0;
+  padding: 0;
   border: 0;
   border-radius: 10px;
   background: transparent;
   color: var(--hero-muted, var(--muted));
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 800;
 }
 
 .detail-button:hover {
@@ -269,23 +324,36 @@ const handleDetailClick = () => {
 @media (max-width: 430px) {
   .weather-card-hover-zone,
   .weather-card {
-    min-height: 150px;
+    min-height: 92px;
+  }
+
+  .weather-card {
+    grid-template-columns: minmax(0, 1fr) 40px;
   }
 
   .card-select {
-    min-height: 102px;
-    grid-template-columns: 46px minmax(0, 1fr) auto;
-    gap: 10px;
-    padding: 14px 14px 6px;
+    min-height: 92px;
+    grid-template-columns: minmax(0, 1fr) 32px auto;
+    gap: 8px;
+    padding: 10px 2px 10px 12px;
   }
 
   .weather-mark {
-    width: 46px;
-    height: 46px;
+    width: 32px;
+    height: 32px;
   }
 
   .temperature strong {
-    font-size: 32px;
+    font-size: clamp(24px, 8vw, 30px);
+  }
+
+  .temperature span {
+    font-size: 11px;
+  }
+
+  .detail-button {
+    width: 40px;
+    min-height: 92px;
   }
 }
 

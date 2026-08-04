@@ -3,16 +3,20 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, watchEffect
 import { ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 
-import BaseDashboardCard from '@/members/dongyeol/components/exercise/BaseDashboardCard.vue'
-import SearchBar from '@/members/dongyeol/components/exercise/SearchBar.vue'
-import WeatherCard from '@/members/dongyeol/components/exercise/WeatherCard.vue'
+import WeatherScene from '@/members/dongyeol/components/common/WeatherScene.vue'
 import LoadingSpinner from '@/members/dongyeol/components/weather/LoadingSpinner.vue'
+import LocationPermissionPanel from '@/members/dongyeol/components/weather/LocationPermissionPanel.vue'
 import TemperatureConditionLabel from '@/members/dongyeol/components/weather/TemperatureConditionLabel.vue'
+import WeatherBackgroundVideo from '@/members/dongyeol/components/weather/WeatherBackgroundVideo.vue'
 import WeatherConditionIcon from '@/members/dongyeol/components/weather/WeatherConditionIcon.vue'
+import WorldWeatherDrawer from '@/members/dongyeol/components/weather/WorldWeatherDrawer.vue'
+import { useCurrentLocationWeather } from '@/members/dongyeol/composables/useCurrentLocationWeather'
 import { useDocumentTitle } from '@/members/dongyeol/composables/useDocumentTitle'
 import { useHomeWeatherDashboard } from '@/members/dongyeol/composables/useHomeWeatherDashboard'
 import { useTemperature } from '@/members/dongyeol/composables/useTemperature'
-import { CITY_CONFIG } from '@/members/dongyeol/data/cities'
+import { CITY_CONFIG, CITY_REGIONS } from '@/members/dongyeol/data/cities'
+import { CURRENT_LOCATION_ID } from '@/members/dongyeol/services/geolocation'
+import { formatKoreanSelectionMessage } from '@/members/dongyeol/utils/koreanGrammar'
 import { matchesSearchQuery, normalizeSearchQuery } from '@/members/dongyeol/utils/search'
 import { formatWeatherDateTime, getWeatherTheme } from '@/members/dongyeol/utils/weatherTheme'
 import { link } from '../routes'
@@ -22,30 +26,77 @@ const router = useRouter()
 
 const getRouteSelectedCityId = () => {
   if (typeof route.query.selected !== 'string') return ''
-  return CITY_CONFIG.some((city) => city.id === route.query.selected) ? route.query.selected : ''
+  return route.query.selected === CURRENT_LOCATION_ID || CITY_CONFIG.some((city) => city.id === route.query.selected) ? route.query.selected : ''
 }
 
-const { apiReady, errorMessage, failedCityCount, initializeWeather, isCityListOpen, isLoading, lastUpdated, loadWeather, selectedCityId, selectedCityInfo, selectedWeather, selectCity, weatherList } =
-  useHomeWeatherDashboard(getRouteSelectedCityId)
+const syncSelectedRoute = (cityId) => {
+  if (route.query.selected === cityId) return Promise.resolve()
+
+  return router.replace({
+    query: { ...route.query, selected: cityId },
+  })
+}
+
+const {
+  apiReady,
+  errorMessage,
+  failedCityCount,
+  initializeWeather,
+  isWorldDrawerOpen,
+  isLoading,
+  lastUpdated,
+  loadCurrentLocation,
+  loadWeather,
+  selectedCityId,
+  selectedCityInfo,
+  selectedWeather,
+  selectCity,
+  weatherList,
+} = useHomeWeatherDashboard(getRouteSelectedCityId)
 const searchQuery = ref('')
+const activeRegion = ref('all')
 const promotingCityId = ref('')
 const isHeroPromoting = ref(false)
 const weatherHero = ref(null)
-const cityListEntry = ref(null)
 let routeCanonicalizationId = 0
 let promotionRequestId = 0
 let promotionTimer = 0
 
+const showDongyeolMessage = (options) => {
+  const appendTo = document.querySelector('.dongyeol-app')
+  if (!appendTo) return
+
+  ElMessage({
+    ...options,
+    appendTo,
+    customClass: ['dongyeol-message', options.customClass].filter(Boolean).join(' '),
+  })
+}
+
+const { dismissLocationPrompt, locationPromptMessage, locationPromptState, requestLocationWeather, startLocationExperience } = useCurrentLocationWeather({
+  initializeWeather,
+  loadCurrentLocation,
+  onLocationLoaded: async (currentWeather) => {
+    await syncSelectedRoute(CURRENT_LOCATION_ID)
+    showDongyeolMessage({ message: `${currentWeather.name} 현재 위치 날씨를 표시합니다.`, type: 'success' })
+  },
+})
+
 const normalizedSearchQuery = computed(() => normalizeSearchQuery(searchQuery.value))
+
+const worldWeatherList = computed(() => weatherList.value.filter((item) => !item.isCurrentLocation))
+const currentLocationWeather = computed(() => weatherList.value.find((item) => item.isCurrentLocation) ?? null)
+const getCityDisplayName = (city) => city?.displayName || city?.name || '도시'
 
 const filteredWeatherList = computed(() => {
   const query = normalizedSearchQuery.value
-  if (!query) return weatherList.value
-  return weatherList.value.filter((item) => matchesSearchQuery(item.name, query))
-})
+  return worldWeatherList.value.filter((item) => {
+    const matchesRegion = activeRegion.value === 'all' || item.region === activeRegion.value
+    if (!matchesRegion) return false
+    if (!query) return true
 
-const otherWeatherList = computed(() => {
-  return filteredWeatherList.value.filter((item) => item.id !== selectedCityId.value)
+    return matchesSearchQuery([item.name, item.displayName, item.countryName, item.countryCode].filter(Boolean).join(' '), query)
+  })
 })
 
 const heroState = computed(() => {
@@ -58,6 +109,8 @@ const heroState = computed(() => {
 
 const heroWeather = computed(() => (heroState.value === 'ready' ? selectedWeather.value : null))
 const heroTheme = computed(() => getWeatherTheme(heroWeather.value))
+const heroCityName = computed(() => (heroWeather.value?.displayName || heroWeather.value?.name)?.toLocaleUpperCase('en-US') ?? '')
+const heroCountryName = computed(() => heroWeather.value?.countryName || heroWeather.value?.countryCode || '위치 정보 없음')
 const { displayTemp: heroTemp, unitSymbol } = useTemperature(() => heroWeather.value?.temp)
 const { displayTemp: heroFeelsLike } = useTemperature(() => heroWeather.value?.feelsLike)
 const hasHeroTemperature = computed(() => Number.isFinite(heroWeather.value?.temp))
@@ -91,43 +144,26 @@ const heroObservedMeta = computed(() => {
 
 const heroAnnouncement = computed(() => {
   if (!heroWeather.value) return heroStateTitle.value
-  return `${heroWeather.value.fullName}, ${heroWeather.value.status || '날씨 설명 없음'}, ${heroTemperatureText.value}`
+  return `${heroCityName.value}, ${heroCountryName.value}, ${heroWeather.value.status || '날씨 설명 없음'}, ${heroTemperatureText.value}`
 })
 
 const emptyStateDescription = computed(() => {
   if (normalizedSearchQuery.value && filteredWeatherList.value.length === 0) {
     return `'${normalizedSearchQuery.value}' 검색 결과가 없습니다.`
   }
-  if (filteredWeatherList.value.length === 1 && selectedWeather.value?.id === filteredWeatherList.value[0]?.id) {
-    return '현재 선택한 도시 외에 표시할 도시가 없습니다.'
+  if (activeRegion.value !== 'all' && filteredWeatherList.value.length === 0) {
+    const region = CITY_REGIONS.find((item) => item.id === activeRegion.value)
+    return `${region?.label ?? '선택한 지역'}에 표시할 도시가 없습니다.`
   }
-  return weatherList.value.length ? '표시할 도시가 없습니다.' : '수신된 날씨 데이터가 없습니다.'
+  return worldWeatherList.value.length ? '표시할 도시가 없습니다.' : '수신된 세계 날씨 데이터가 없습니다.'
 })
 
-useDocumentTitle(() => (selectedWeather.value ? `${selectedWeather.value.name} 현재 날씨` : '오늘의 날씨'))
-
-const showDongyeolMessage = (options) => {
-  const appendTo = document.querySelector('.dongyeol-app')
-
-  ElMessage({
-    ...options,
-    customClass: ['dongyeol-message', options.customClass].filter(Boolean).join(' '),
-    ...(appendTo ? { appendTo } : {}),
-  })
-}
+useDocumentTitle(() => (selectedWeather.value ? `${getCityDisplayName(selectedWeather.value)} 현재 날씨` : '오늘의 날씨'))
 
 const refreshWeather = () => {
   void loadWeather({
     onSuccess: () => showDongyeolMessage({ message: '실시간 날씨를 갱신했습니다.', type: 'success' }),
     onError: () => showDongyeolMessage({ message: '날씨 데이터 요청에 실패했습니다.', type: 'error' }),
-  })
-}
-
-const syncSelectedRoute = (cityId) => {
-  if (route.query.selected === cityId) return Promise.resolve()
-
-  return router.replace({
-    query: { ...route.query, selected: cityId },
   })
 }
 
@@ -138,7 +174,7 @@ const applySelection = (city) => {
 
 const showCitySelectionMessage = (city) => {
   showDongyeolMessage({
-    message: `${city.name}이 선택되었습니다.`,
+    message: formatKoreanSelectionMessage(getCityDisplayName(city), city.name),
     type: 'primary',
     plain: true,
     duration: 1500,
@@ -149,6 +185,7 @@ const showCitySelectionMessage = (city) => {
 }
 
 const handleSelect = async (city) => {
+  isWorldDrawerOpen.value = false
   if (city.id === selectedCityId.value) return
 
   showCitySelectionMessage(city)
@@ -171,16 +208,7 @@ const handleSelect = async (city) => {
     weatherHero.value?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' })
   }
 
-  if (!reduceMotion && typeof document.startViewTransition === 'function') {
-    try {
-      const transition = document.startViewTransition(updateHero)
-      await transition.finished
-    } catch {
-      await updateHero()
-    }
-  } else {
-    await updateHero()
-  }
+  await updateHero()
 
   if (requestId !== promotionRequestId) return
   promotionTimer = window.setTimeout(() => {
@@ -194,28 +222,17 @@ const openWeatherDetail = (cityId) => {
   const city = weatherList.value.find((item) => item.id === cityId)
   if (!city) return
 
-  selectedCityInfo.value = `${city.name} 상세 날씨 페이지로 이동합니다.`
+  selectedCityInfo.value = `${getCityDisplayName(city)} 상세 날씨 페이지로 이동합니다.`
   void router.push(link('detail', { cityId }, { ...route.query, selected: cityId }))
 }
 
-const scrollToOpenedCityList = () => {
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-  cityListEntry.value?.scrollIntoView({
-    behavior: reduceMotion ? 'auto' : 'smooth',
-    block: 'start',
-  })
-}
-
-const toggleCityList = () => {
-  const shouldOpen = !isCityListOpen.value
-  isCityListOpen.value = shouldOpen
-
-  selectedCityInfo.value = shouldOpen ? '도시별 날씨 목록을 펼쳤습니다.' : '도시별 날씨 목록을 닫았습니다.'
+const closeWorldDrawer = () => {
+  isWorldDrawerOpen.value = false
+  selectedCityInfo.value = '세계 날씨 서랍을 닫았습니다.'
 }
 
 onMounted(() => {
-  initializeWeather()
+  startLocationExperience()
 })
 
 onBeforeUnmount(() => {
@@ -248,21 +265,11 @@ watch(
   { immediate: true },
 )
 
-watch(
-  () => normalizeSearchQuery(searchQuery.value),
-  (normalizedQuery) => {
-    if (normalizedQuery && !isCityListOpen.value) {
-      isCityListOpen.value = true
-    }
-  },
-  { immediate: true },
-)
-
 watch(searchQuery, (newQuery, oldQuery) => {
   const normalizedQuery = normalizeSearchQuery(newQuery)
 
   if (newQuery !== oldQuery && !isLoading.value && !errorMessage.value) {
-    selectedCityInfo.value = selectedWeather.value ? `${selectedWeather.value.name} 선택을 유지하며 검색 결과를 필터링했습니다.` : '검색 결과에서 도시 카드를 선택해 보세요.'
+    selectedCityInfo.value = selectedWeather.value ? `${getCityDisplayName(selectedWeather.value)} 선택을 유지하며 검색 결과를 필터링했습니다.` : '검색 결과에서 도시 카드를 선택해 보세요.'
   }
 
   const routeSearch = normalizeSearchQuery(route.query.search)
@@ -288,242 +295,125 @@ if (import.meta.env.DEV) {
 </script>
 
 <template>
-  <div class="weather-scene" :class="`hero-state-${heroState}`" :style="heroTheme.cssVariables" :data-theme="heroTheme.name">
-    <div class="scene-atmosphere" aria-hidden="true"></div>
+  <WeatherScene class="weather-home-scene" :class="`hero-state-${heroState}`" :theme="heroTheme">
+    <template #backdrop>
+      <WeatherBackgroundVideo :weather="heroWeather" />
+    </template>
 
     <div class="weather-shell">
-      <div class="hero-stage">
+      <div class="hero-stage" :class="{ 'is-location-prompt': locationPromptState }">
         <section
           ref="weatherHero"
           class="weather-hero"
-          :class="{ 'is-promoting': isHeroPromoting }"
-          :style="{ viewTransitionName: promotingCityId && heroWeather?.id === promotingCityId ? 'weather-promotion' : undefined }"
-          :aria-busy="isLoading"
-          aria-labelledby="weather-hero-title"
+          :class="{ 'is-promoting': isHeroPromoting, 'is-location-prompt': locationPromptState }"
+          :aria-busy="isLoading || locationPromptState === 'requesting'"
+          :aria-labelledby="locationPromptState ? 'location-consent-title' : 'weather-hero-title'"
           tabindex="-1"
         >
           <p class="sr-only" aria-live="polite">{{ heroAnnouncement }}</p>
-          <button class="refresh-button" type="button" :disabled="!apiReady || isLoading" :aria-label="isLoading ? '날씨 갱신 중' : '날씨 새로고침'" @click="refreshWeather">
-            <svg viewBox="0 0 24 24" :class="{ 'is-spinning': isLoading }" aria-hidden="true">
-              <path d="M20 6v5h-5" />
-              <path d="M18.2 15a7 7 0 1 1-.7-7.1L20 11" />
-            </svg>
-          </button>
+          <LocationPermissionPanel v-if="locationPromptState" :state="locationPromptState" :message="locationPromptMessage" @accept="requestLocationWeather" @dismiss="dismissLocationPrompt" />
 
-          <div v-if="heroWeather" class="hero-face hero-face-front">
-            <div class="hero-location">
-              <h1 id="weather-hero-title">{{ heroWeather.fullName }}</h1>
-              <p class="condition-label">{{ heroWeather.status || heroTheme.label || '날씨 설명 없음' }}</p>
-            </div>
+          <template v-else>
+            <button class="refresh-button" type="button" :disabled="!apiReady || isLoading" :aria-label="isLoading ? '날씨 갱신 중' : '날씨 새로고침'" @click="refreshWeather">
+              <svg viewBox="0 0 24 24" :class="{ 'is-spinning': isLoading }" aria-hidden="true">
+                <path d="M20 6v5h-5" />
+                <path d="M18.2 15a7 7 0 1 1-.7-7.1L20 11" />
+              </svg>
+            </button>
 
-            <div class="hero-current" role="group" :aria-label="`현재 기온 ${heroTemperatureText}`">
-              <div class="hero-icon">
-                <WeatherConditionIcon :category="heroTheme.category" :is-night="heroTheme.isNight" />
+            <div v-if="heroWeather" class="hero-face hero-face-front">
+              <div class="hero-location">
+                <h1 id="weather-hero-title">{{ heroCityName }}</h1>
+                <p class="hero-country-name">{{ heroCountryName }}</p>
+                <div v-if="heroWeather.isCurrentLocation || currentLocationWeather" class="hero-location-action">
+                  <span v-if="heroWeather.isCurrentLocation" class="current-location-label">내 위치</span>
+                  <button v-else-if="currentLocationWeather" class="return-location-button" type="button" @click="handleSelect(currentLocationWeather)">내 위치로</button>
+                </div>
               </div>
-              <div class="hero-temperature-stack">
+
+              <div class="hero-weather-lockup" role="group" :aria-label="`현재 기온 ${heroTemperatureText}`">
+                <div class="hero-condition-summary">
+                  <span>{{ heroWeather.status || heroTheme.label || '날씨 설명 없음' }}</span>
+                  <TemperatureConditionLabel v-if="hasHeroTemperature" class="hero-temperature-condition" :temperature="heroWeather.temp" />
+                </div>
                 <div class="hero-temperature" :class="{ missing: !hasHeroTemperature }">
                   <strong>{{ hasHeroTemperature ? heroTemp : '정보 없음' }}</strong>
                   <span v-if="hasHeroTemperature">{{ unitSymbol }}</span>
                 </div>
-                <TemperatureConditionLabel v-if="hasHeroTemperature" class="hero-temperature-condition" :temperature="heroWeather.temp" />
-              </div>
-            </div>
-
-            <dl class="hero-metrics">
-              <div>
-                <dt>체감</dt>
-                <dd>{{ heroFeelsLikeText }}</dd>
-              </div>
-              <div>
-                <dt>습도</dt>
-                <dd>{{ heroHumidityText }}</dd>
-              </div>
-              <div>
-                <dt>풍속</dt>
-                <dd>{{ heroWindText }}</dd>
-              </div>
-              <div>
-                <dt>{{ heroObservedMeta.label }}</dt>
-                <dd>{{ heroObservedMeta.value }}</dd>
-              </div>
-            </dl>
-
-            <button class="hero-detail-button" type="button" :disabled="isHeroPromoting" :aria-label="`${heroWeather.name} 상세 날씨 페이지로 이동`" @click="openWeatherDetail(heroWeather.id)">
-              <span>상세 보기</span>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M5 12h14M14 7l5 5-5 5" />
-              </svg>
-            </button>
-          </div>
-
-          <div v-else class="hero-placeholder">
-            <LoadingSpinner v-if="heroState === 'loading'" class="hero-loading-spinner" />
-            <div v-else class="hero-placeholder-icon">
-              <WeatherConditionIcon category="neutral" :is-night="false" />
-            </div>
-            <h1 id="weather-hero-title">{{ heroStateTitle }}</h1>
-            <p>{{ heroStateCopy }}</p>
-          </div>
-        </section>
-
-        <div ref="cityListEntry" class="hero-search-stack">
-          <BaseDashboardCard class="hero-search">
-            <SearchBar :current-query="searchQuery" @update-query="(value) => (searchQuery = value)" />
-          </BaseDashboardCard>
-
-          <button
-            class="list-jump-button"
-            type="button"
-            aria-controls="city-weather-region"
-            :aria-expanded="isCityListOpen"
-            :aria-label="isCityListOpen ? '도시 목록 닫기' : '도시 목록 열기'"
-            @click="toggleCityList"
-          >
-            <span>도시 목록</span>
-            <svg viewBox="0 0 20 20" :class="{ 'is-open': isCityListOpen }" aria-hidden="true">
-              <path d="m5 7 5 5 5-5" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <Transition name="city-list" @after-enter="scrollToOpenedCityList">
-        <div v-show="isCityListOpen" class="city-list-reveal">
-          <section id="city-weather-region" class="city-section" aria-label="도시별 날씨 목록">
-            <p v-if="isCityListOpen && normalizedSearchQuery" class="search-result-label" role="status">[{{ normalizedSearchQuery }}] 검색 결과</p>
-            <p v-if="failedCityCount" class="partial-warning" role="status">{{ failedCityCount }}개 도시는 잠시 불러오지 못했습니다.</p>
-            <BaseDashboardCard class="weather-content" :aria-busy="isLoading">
-              <div v-if="isLoading" class="state-panel dashboard-surface dashboard-surface--state loading-state">
-                <el-skeleton :rows="3" animated />
-              </div>
-              <div v-else-if="errorMessage" class="state-panel dashboard-surface dashboard-surface--state">
-                <el-result :icon="apiReady ? 'error' : 'warning'" title="날씨 정보를 표시할 수 없습니다" :sub-title="errorMessage" />
-              </div>
-              <div v-else-if="otherWeatherList.length" class="weather-results">
-                <div id="city-weather-list" class="weather-list">
-                  <WeatherCard
-                    v-for="item in otherWeatherList"
-                    :key="item.id"
-                    :city-item="item"
-                    :selected="item.id === selectedCityId"
-                    :promoting="item.id === promotingCityId"
-                    :style="getWeatherTheme(item).cssVariables"
-                    @select-card="handleSelect"
-                    @click-detail="openWeatherDetail"
-                  />
+                <div class="hero-icon">
+                  <WeatherConditionIcon :category="heroTheme.category" :is-night="heroTheme.isNight" />
                 </div>
               </div>
-              <div v-else class="state-panel dashboard-surface dashboard-surface--state empty-state">
-                <el-empty :description="emptyStateDescription" />
+
+              <dl class="hero-metrics">
+                <div>
+                  <dt>체감</dt>
+                  <dd>{{ heroFeelsLikeText }}</dd>
+                </div>
+                <div>
+                  <dt>습도</dt>
+                  <dd>{{ heroHumidityText }}</dd>
+                </div>
+                <div>
+                  <dt>풍속</dt>
+                  <dd>{{ heroWindText }}</dd>
+                </div>
+                <div>
+                  <dt>{{ heroObservedMeta.label }}</dt>
+                  <dd>{{ heroObservedMeta.value }}</dd>
+                </div>
+              </dl>
+
+              <button class="hero-detail-button" type="button" :disabled="isHeroPromoting" :aria-label="`${heroWeather.name} 상세 날씨 페이지로 이동`" @click="openWeatherDetail(heroWeather.id)">
+                <span>상세 보기</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 12h14M14 7l5 5-5 5" />
+                </svg>
+              </button>
+            </div>
+
+            <div v-else class="hero-placeholder">
+              <LoadingSpinner v-if="heroState === 'loading'" class="hero-loading-spinner" />
+              <div v-else class="hero-placeholder-icon">
+                <WeatherConditionIcon category="neutral" :is-night="false" />
               </div>
-            </BaseDashboardCard>
-          </section>
-        </div>
-      </Transition>
+              <h1 id="weather-hero-title">{{ heroStateTitle }}</h1>
+              <p>{{ heroStateCopy }}</p>
+            </div>
+          </template>
+        </section>
+      </div>
 
       <p class="sr-only" aria-live="polite">{{ selectedCityInfo }}</p>
     </div>
-  </div>
+
+    <WorldWeatherDrawer
+      :open="isWorldDrawerOpen"
+      :regions="CITY_REGIONS"
+      :active-region="activeRegion"
+      :current-query="searchQuery"
+      :items="filteredWeatherList"
+      :selected-city-id="selectedCityId"
+      :promoting-city-id="promotingCityId"
+      :is-loading="isLoading"
+      :api-ready="apiReady"
+      :error-message="errorMessage"
+      :failed-city-count="failedCityCount"
+      :empty-description="emptyStateDescription"
+      @close="closeWorldDrawer"
+      @update-query="(value) => (searchQuery = value)"
+      @update-region="(value) => (activeRegion = value)"
+      @select-city="handleSelect"
+      @open-detail="openWeatherDetail"
+    />
+  </WeatherScene>
 </template>
 
 <style scoped>
-.weather-scene {
-  position: relative;
-  min-height: 100svh;
-  isolation: isolate;
-  overflow: clip;
-  background:
-    radial-gradient(circle at 78% 12%, color-mix(in srgb, var(--weather-accent) 24%, transparent) 0%, transparent 31%),
-    radial-gradient(ellipse at 14% 88%, color-mix(in srgb, var(--hero-end) 72%, transparent) 0%, transparent 52%),
-    linear-gradient(158deg, var(--hero-start) 0%, color-mix(in srgb, var(--hero-start) 54%, var(--hero-end)) 52%, var(--hero-end) 100%);
-  color: var(--hero-text);
-  transition:
-    --hero-start 500ms ease,
-    --hero-end 500ms ease,
-    --weather-accent 500ms ease,
-    --hero-text 500ms ease,
-    --hero-muted 500ms ease,
-    color 500ms ease;
-}
-
-.weather-scene::before,
-.weather-scene::after,
-.scene-atmosphere {
-  position: absolute;
-  pointer-events: none;
-  content: '';
-}
-
-.weather-scene::before {
-  z-index: -2;
-  inset: -18% -14% -8%;
-  background:
-    radial-gradient(ellipse at 12% 28%, rgba(255, 255, 255, 0.34) 0 6%, transparent 28%), radial-gradient(ellipse at 52% 20%, rgba(255, 255, 255, 0.2) 0 8%, transparent 31%),
-    radial-gradient(ellipse at 88% 38%, color-mix(in srgb, var(--weather-accent) 22%, transparent) 0 7%, transparent 30%);
-  filter: blur(34px);
-  opacity: 0.82;
-  animation: atmosphere-drift 22s ease-in-out infinite alternate;
-}
-
-.weather-scene::after {
-  z-index: -1;
-  right: -22%;
-  bottom: -20%;
-  left: -22%;
-  height: 62%;
-  background: radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--weather-accent) 26%, transparent) 0%, transparent 62%), linear-gradient(to top, rgba(255, 255, 255, 0.13), transparent 72%);
-  filter: blur(58px);
-  opacity: 0.72;
-}
-
-.scene-atmosphere {
-  z-index: -1;
-  inset: 0;
-  background: radial-gradient(ellipse at 50% -8%, rgba(255, 255, 255, 0.22), transparent 48%), linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 48%, rgba(255, 255, 255, 0.07));
-}
-
-.weather-scene[data-theme='clouds'] .scene-atmosphere {
-  background:
-    radial-gradient(ellipse at 14% 20%, rgba(255, 255, 255, 0.31) 0 7%, transparent 26%), radial-gradient(ellipse at 43% 11%, rgba(255, 255, 255, 0.19) 0 9%, transparent 30%),
-    radial-gradient(ellipse at 82% 31%, rgba(255, 255, 255, 0.24) 0 8%, transparent 28%);
-  filter: blur(18px);
-}
-
-.weather-scene[data-theme='rain'] .scene-atmosphere,
-.weather-scene[data-theme='thunderstorm'] .scene-atmosphere {
-  background: repeating-linear-gradient(105deg, transparent 0 18px, rgba(255, 255, 255, 0.09) 19px, transparent 21px 34px);
-  opacity: 0.48;
-}
-
-.weather-scene[data-theme='snow'] .scene-atmosphere {
-  background:
-    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.72) 0 2px, transparent 3px), radial-gradient(circle at 70% 34%, rgba(255, 255, 255, 0.62) 0 3px, transparent 4px),
-    radial-gradient(circle at 43% 55%, rgba(255, 255, 255, 0.58) 0 2px, transparent 3px);
-  background-size:
-    88px 88px,
-    122px 122px,
-    148px 148px;
-}
-
-.weather-scene[data-theme='mist'] .scene-atmosphere {
-  background: radial-gradient(ellipse at 18% 30%, rgba(255, 255, 255, 0.28), transparent 48%), radial-gradient(ellipse at 78% 58%, rgba(255, 255, 255, 0.22), transparent 52%);
-  filter: blur(28px);
-}
-
-@keyframes atmosphere-drift {
-  from {
-    transform: translate3d(-1.5%, -0.5%, 0) scale(1);
-  }
-
-  to {
-    transform: translate3d(1.5%, 0.8%, 0) scale(1.035);
-  }
-}
-
 .weather-shell {
   width: min(1120px, calc(100% - 40px));
   margin: 0 auto;
-  padding: 0 0 calc(116px + env(safe-area-inset-bottom));
+  padding: 0;
   perspective: 1800px;
   perspective-origin: 50% 24%;
 }
@@ -533,66 +423,13 @@ if (import.meta.env.DEV) {
   display: grid;
   min-height: 100vh;
   min-height: 100svh;
-  grid-template-rows: minmax(min-content, 1fr) auto;
-  align-items: center;
-  row-gap: clamp(18px, 2.4svh, 32px);
-  padding: clamp(24px, 5vh, 58px) 0 var(--floating-nav-clearance, calc(80px + env(safe-area-inset-bottom)));
+  place-items: center;
+  padding: clamp(72px, 10svh, 104px) 0 calc(var(--floating-nav-height, 54px) + var(--floating-nav-offset, 12px) + 42px + env(safe-area-inset-bottom));
 }
 
-.hero-search-stack {
-  position: relative;
-  width: min(310px, 100%);
-  min-width: 0;
-  margin: 0 auto;
-  scroll-margin-top: clamp(52px, 9svh, 132px);
-}
-
-.hero-search {
-  width: 100%;
-}
-
-.list-jump-button {
-  position: absolute;
-  z-index: 1;
-  top: calc(100% - 10px);
-  left: 50%;
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--hero-muted);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 800;
-  transform: translateX(-50%);
-  transition:
-    color 180ms ease,
-    transform 180ms ease;
-}
-
-.list-jump-button svg {
-  width: 16px;
-  height: 16px;
-  fill: none;
-  stroke: currentcolor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2;
-  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.list-jump-button svg.is-open {
-  transform: rotate(180deg);
-}
-
-.list-jump-button:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--weather-accent) 72%, white);
-  outline-offset: 1px;
+.hero-stage.is-location-prompt {
+  min-height: 100dvh;
+  padding: max(20px, env(safe-area-inset-top)) 0 max(20px, env(safe-area-inset-bottom));
 }
 
 .refresh-button {
@@ -654,6 +491,10 @@ if (import.meta.env.DEV) {
   text-align: center;
 }
 
+.weather-hero.is-location-prompt {
+  width: min(1040px, 100%);
+}
+
 .hero-face,
 .hero-placeholder {
   box-sizing: border-box;
@@ -691,35 +532,68 @@ if (import.meta.env.DEV) {
   }
 }
 
-:global(::view-transition-group(weather-promotion)) {
-  z-index: 20;
-  animation-duration: 560ms;
-  animation-timing-function: cubic-bezier(0.2, 0.85, 0.25, 1);
-}
-
-:global(::view-transition-old(weather-promotion)),
-:global(::view-transition-new(weather-promotion)) {
-  mix-blend-mode: normal;
-}
-
 .hero-location {
   display: grid;
   justify-items: center;
+  gap: 9px;
 }
 
-.condition-label {
-  margin: 8px 0 0;
-  padding: 0;
-  border: 0;
+.hero-country-name {
+  margin: 0;
   color: var(--hero-muted);
-  font-size: 12px;
-  font-weight: 800;
+  font-size: clamp(12px, 1.4vw, 15px);
+  font-weight: 780;
+  letter-spacing: 0.08em;
+}
+
+.hero-location-action {
+  display: flex;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+}
+
+.current-location-label,
+.return-location-button {
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  color: var(--hero-muted);
+  font-size: 9px;
+  font-weight: 820;
+  letter-spacing: 0;
+}
+
+.current-location-label {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--hero-text) 12%, transparent);
+  background: color-mix(in srgb, white 16%, transparent);
+}
+
+.return-location-button {
+  border: 0;
+  background: color-mix(in srgb, var(--hero-text) 8%, transparent);
+  cursor: pointer;
 }
 
 .hero-location h1,
 .hero-placeholder h1 {
   margin: 0;
   color: inherit;
+  font-size: clamp(58px, 10.5vw, 112px);
+  font-weight: 760;
+  line-height: 0.88;
+  letter-spacing: -0.065em;
+}
+
+.hero-location h1 {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.hero-placeholder h1 {
   font-size: clamp(24px, 4.2vw, 42px);
   line-height: 1.14;
   letter-spacing: -0.045em;
@@ -730,44 +604,52 @@ if (import.meta.env.DEV) {
   color: var(--hero-muted);
 }
 
-.hero-current {
-  display: flex;
+.hero-weather-lockup {
+  display: grid;
+  width: min(620px, 100%);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: center;
-  gap: clamp(14px, 2.4vw, 26px);
-  margin: 26px 0 30px;
+  gap: clamp(10px, 1.9vw, 22px);
+  margin: clamp(25px, 4.5vw, 42px) auto clamp(30px, 4.8vw, 44px);
+}
+
+.hero-condition-summary {
+  display: grid;
+  width: 100%;
+  justify-items: end;
+  gap: 8px;
+  color: var(--hero-muted);
+  font-size: clamp(11px, 1.25vw, 14px);
+  font-weight: 820;
+  line-height: 1.3;
+  text-align: right;
 }
 
 .hero-icon {
-  width: clamp(118px, 16vw, 172px);
-  height: clamp(118px, 16vw, 172px);
-  padding: 12px;
+  width: clamp(72px, 8vw, 92px);
+  height: clamp(72px, 8vw, 92px);
+  justify-self: start;
+  padding: 6px;
   color: var(--weather-accent);
-  transition: transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateY(6px);
 }
 
 .hero-temperature {
-  display: flex;
-  align-items: flex-start;
-  gap: clamp(8px, 1vw, 14px);
+  position: relative;
+  display: block;
+  justify-self: center;
   min-width: 0;
   white-space: nowrap;
 }
 
-.hero-temperature-stack {
-  display: grid;
-  min-width: 0;
-  justify-items: start;
-  gap: 12px;
-}
-
 .hero-temperature-condition {
-  --temperature-condition-font-size: 12px;
-  --temperature-condition-icon-size: 15px;
+  --temperature-condition-font-size: inherit;
+  --temperature-condition-icon-size: 13px;
 }
 
 .hero-temperature strong {
-  font-size: clamp(72px, 11vw, 112px);
+  display: block;
+  font-size: clamp(78px, 11.5vw, 122px);
   font-weight: 720;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.055em;
@@ -775,7 +657,10 @@ if (import.meta.env.DEV) {
 }
 
 .hero-temperature span {
-  margin-top: 4px;
+  position: absolute;
+  top: 4px;
+  left: 100%;
+  margin-left: clamp(8px, 1vw, 14px);
   font-size: 21px;
   font-weight: 800;
   line-height: 1;
@@ -859,7 +744,6 @@ if (import.meta.env.DEV) {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2;
-  transition: transform 180ms ease;
 }
 
 .hero-detail-button:focus-visible {
@@ -880,7 +764,6 @@ if (import.meta.env.DEV) {
   margin-bottom: 18px;
   padding: 12px;
   color: var(--weather-accent);
-  transition: transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .hero-loading-spinner {
@@ -889,101 +772,11 @@ if (import.meta.env.DEV) {
   margin-bottom: 22px;
 }
 
-.city-list-reveal {
-  --city-list-lift: 108px;
-
-  display: grid;
-  grid-template-rows: 1fr;
-  margin-top: calc(0px - var(--city-list-lift));
-}
-
-.city-section {
-  box-sizing: border-box;
-  width: min(980px, 100%);
-  min-height: 0;
-  margin: 0 auto;
-  padding-top: clamp(22px, 4svh, 44px);
-}
-
-.city-list-enter-active,
-.city-list-leave-active {
-  overflow: clip;
-  transition:
-    grid-template-rows 480ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 240ms ease;
-}
-
-.city-list-enter-active .city-section,
-.city-list-leave-active .city-section {
-  overflow: clip;
-  transition: transform 480ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.city-list-enter-from,
-.city-list-leave-to {
-  grid-template-rows: 0fr;
-  opacity: 0;
-}
-
-.city-list-enter-from .city-section,
-.city-list-leave-to .city-section {
-  transform: translateY(-18px);
-}
-
-.search-result-label,
-.partial-warning {
-  margin: 0 4px 12px;
-  color: var(--hero-muted);
-  font-size: 12px;
-  font-weight: 750;
-}
-
-.weather-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .weather-hero:not(.is-promoting):hover .hero-icon,
-  .weather-hero:not(.is-promoting):hover .hero-placeholder-icon {
-    transform: translateY(-8px) scale(1.045);
-  }
-
   .refresh-button:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.14);
     color: inherit;
     transform: translateY(-1px);
-  }
-
-  .hero-detail-button:hover:not(:disabled) svg {
-    transform: translateX(3px);
-  }
-
-  .list-jump-button:hover {
-    color: inherit;
-    transform: translate(-50%, 2px);
-  }
-}
-
-.state-panel {
-  min-height: 190px;
-  padding: 20px;
-}
-
-.loading-state {
-  padding: 28px;
-}
-
-.state-panel :deep(.el-result__title p),
-.state-panel :deep(.el-result__subtitle p),
-.state-panel :deep(.el-empty__description p) {
-  color: var(--hero-text);
-}
-
-@media (max-width: 800px) {
-  .weather-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -998,30 +791,32 @@ if (import.meta.env.DEV) {
   }
 
   .hero-stage {
-    padding-top: 20px;
+    padding: 64px 0 calc(var(--floating-nav-height, 54px) + var(--floating-nav-offset, 9px) + 34px + env(safe-area-inset-bottom));
   }
 
-  .hero-current {
-    margin: 22px 0 26px;
-    gap: 10px;
+  .hero-weather-lockup {
+    gap: 7px;
+    margin: 25px auto 28px;
+  }
+
+  .hero-condition-summary {
+    gap: 4px;
+    font-size: 10px;
   }
 
   .hero-icon {
-    width: clamp(96px, 28vw, 126px);
-    height: clamp(96px, 28vw, 126px);
-    padding: 8px;
-  }
-
-  .hero-temperature {
-    gap: 7px;
+    width: clamp(64px, 18vw, 76px);
+    height: clamp(64px, 18vw, 76px);
+    padding: 4px;
   }
 
   .hero-temperature strong {
-    font-size: clamp(58px, 20vw, 76px);
+    font-size: clamp(58px, 19vw, 82px);
     letter-spacing: -0.045em;
   }
 
   .hero-temperature span {
+    margin-left: 7px;
     font-size: 17px;
   }
 
@@ -1049,32 +844,25 @@ if (import.meta.env.DEV) {
   .hero-detail-button {
     width: auto;
   }
-
-  .weather-list {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 360px) {
+  .hero-location h1 {
+    font-size: 50px;
+  }
+
   .hero-temperature strong {
-    font-size: 54px;
+    font-size: 50px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .weather-scene,
-  .weather-scene::before,
   .weather-hero.is-promoting {
     animation: none;
     transition: none;
   }
 
   .hero-detail-button {
-    transition: none;
-  }
-
-  .hero-icon,
-  .hero-placeholder-icon {
     transition: none;
   }
 
@@ -1086,33 +874,7 @@ if (import.meta.env.DEV) {
     transition: none;
   }
 
-  .hero-detail-button svg {
-    transition: none;
-  }
-
-  .list-jump-button {
-    transition: none;
-  }
-
-  .list-jump-button svg,
-  .city-list-enter-active,
-  .city-list-leave-active,
-  .city-list-enter-active .city-section,
-  .city-list-leave-active .city-section {
-    transition: none;
-  }
-
-  .hero-detail-button:hover:not(:disabled) svg,
   .refresh-button:hover:not(:disabled) {
-    transform: none;
-  }
-
-  .list-jump-button:hover {
-    transform: translateX(-50%);
-  }
-
-  .weather-hero:hover .hero-icon,
-  .weather-hero:hover .hero-placeholder-icon {
     transform: none;
   }
 }

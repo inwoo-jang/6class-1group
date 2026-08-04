@@ -15,11 +15,4 @@ export const authApi = {
       () => browserFallback.getMyProfile(sessionStorage.getItem(accessTokenKey)),
     )
   },
-
-  async getProtectedMessage() {
-    return withBrowserFallback(
-      async () => (await http.get('/auth/protected-message')).data,
-      () => browserFallback.getProtectedMessage(sessionStorage.getItem(accessTokenKey)),
-    )
-  },
 }
