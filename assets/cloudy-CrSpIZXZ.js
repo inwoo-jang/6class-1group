@@ -1,0 +1,1 @@
+var e=`/6class-1group/assets/cloudy-QAQ7IEnL.jpg`;export{e as default};
