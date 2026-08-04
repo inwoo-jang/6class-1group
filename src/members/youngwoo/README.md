@@ -1,4 +1,4 @@
-# yeongwoo
+# youngwoo
 
 여기가 당신의 작업 폴더입니다. **이 폴더 밖은 건드릴 일이 없습니다.**
 
@@ -8,7 +8,7 @@
 (이 파일이 생기기 전까지는 목록에 "준비 중" 으로 남습니다.)
 
 ```
-src/members/yeongwoo/
+src/members/youngwoo/
 ├── index.vue      ← 이것만 있으면 됩니다
 ├── views/         ← 화면이 여러 개면
 ├── components/    ← 재사용 부품
@@ -21,14 +21,14 @@ src/members/yeongwoo/
 ## 화면이 여러 개라면
 
 `routes.js` 를 만들고 하위 경로를 적으면 됩니다.
-라우트 이름 앞에는 자동으로 `yeongwoo.` 가 붙으므로,
+라우트 이름 앞에는 자동으로 `youngwoo.` 가 붙으므로,
 다른 팀원과 이름이 겹쳐도 부딪히지 않습니다.
 
 ```js
 // routes.js
 import { memberLink } from '../link'
 
-export const link = memberLink('yeongwoo')
+export const link = memberLink('youngwoo')
 
 export default [
   { path: '', name: 'home', component: () => import('./views/HomeView.vue') },
