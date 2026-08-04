@@ -347,7 +347,12 @@ const showDetail = (cityName) => {
           <span class="btn-label">{{ locationState === 'asking' ? '찾는 중…' : '내 위치' }}</span>
         </el-button>
 
-        <!-- 새로고침은 아이콘만 — loading 이면 el-button 이 알아서 회전 표시를 낸다 -->
+        <!--
+          새로고침은 아이콘만.
+          loading 이면 el-button 이 스피너를 "앞에 덧붙인다" — 원래 아이콘을 치워
+          주는 게 아니다. 그대로 두면 동그란 버튼 안에 아이콘 두 개가 들어가
+          자리가 모자라 밖으로 삐져나온다. 그래서 로딩 중에는 이쪽을 감춘다.
+        -->
         <el-button
           circle
           size="small"
@@ -356,7 +361,7 @@ const showDetail = (cityName) => {
           aria-label="새로고침"
           @click="load(true)"
         >
-          <UiIcon name="refresh" :size="15" />
+          <UiIcon v-if="!isLoading" name="refresh" :size="15" />
         </el-button>
 
         <!-- 새로고침 옆 — 온도 단위 -->

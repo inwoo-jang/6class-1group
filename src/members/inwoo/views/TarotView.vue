@@ -1,9 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue'
-import { storeToRefs } from 'pinia'
 import { cardBack, tarotCards } from '../data/tarotCards'
-import { SPREAD, buildLocalReading, describeError, streamReading } from '../data/tarotReading'
-import { useAiStore } from '../stores/aiStore'
+import { SPREAD, buildLocalReading, streamReadingViaProxy } from '../data/tarotReading'
 
 /**
  * 오늘의 운세 — 78장에서 세 장을 뽑아 AI 해석을 받는다.
@@ -15,9 +13,6 @@ import { useAiStore } from '../stores/aiStore'
  * 카드는 data/tarotCards.js, 해석은 data/tarotReading.js 가 맡는다.
  * 이 파일은 "무엇을 언제 보여줄지"만 정한다.
  */
-const aiStore = useAiStore()
-const { hasKey, maskedKey } = storeToRefs(aiStore)
-
 /* ── 덱 ─────────────────────────────────────────────────────────── */
 const makeShuffledDeck = () => [...tarotCards].sort(() => Math.random() - 0.5)
 const shuffledCards = ref(makeShuffledDeck())
@@ -33,6 +28,27 @@ const pickedIds = computed(() => new Set(picks.value.map((pick) => pick.card.id)
 
 /** 지금 몇 번째 자리를 고르는 중인지 */
 const currentSlot = computed(() => SPREAD[picks.value.length] ?? null)
+
+/**
+ * 머리말 아래 안내 한 줄.
+ *
+ * 카드를 뽑는 순간 문구가 사라지면 그 자리가 비어 어색하다.
+ * 자리는 그대로 두고 내용만 지금 상태에 맞게 바꾼다.
+ */
+const introMessage = computed(() => {
+  const left = SPREAD.length - picks.value.length
+
+  if (!picks.value.length) {
+    return '아래 78장 중 세 장을 고르면 오늘의 흐름 · 변수 · 조언을 읽어 드립니다.'
+  }
+  if (left > 0) {
+    return `${picks.value.length}장을 골랐습니다. ${left}장을 더 고르면 해석이 시작됩니다.`
+  }
+  if (reading.value.status === 'loading') {
+    return '세 장이 모두 놓였습니다. 카드를 읽는 중입니다…'
+  }
+  return '세 장이 모두 놓였습니다. 아래에서 오늘의 흐름 · 변수 · 조언을 확인해 보세요.'
+})
 
 const formattedDate = new Intl.DateTimeFormat('ko-KR', {
   month: 'long',
@@ -77,42 +93,44 @@ const resetReading = () => {
   reading.value = { status: 'idle', text: '', source: '', error: '' }
 }
 
+/** 기본 해설로 내려앉는다 — 화면이 비는 것만은 막는다 */
+const fallBackToLocal = () => {
+  reading.value = {
+    status: 'done',
+    text: buildLocalReading(picks.value),
+    source: 'local',
+    error: '',
+  }
+}
+
 /**
  * 세 장이 모이면 해석을 받는다.
- * 키가 있으면 AI, 없으면 카드에 딸린 기본 해설로 대신한다.
+ *
+ * AI 해석은 서버(api/tarot.js)가 자기 키로 받아 온다. 브라우저는 뽑은 카드
+ * 세 장만 보낸다 — 브라우저는 비밀을 가질 수 없으니 키를 여기 두지 않는다.
+ *
+ * 서버가 없든, 키가 아직 없든, 모델이 답을 못 하든 — 이유를 따지지 않고
+ * 카드에 딸린 기본 해설로 넘어간다. 운세를 보러 온 사람에게 API 사정을
+ * 설명하는 화면은 아무 쓸모가 없다.
  */
 const requestReading = async () => {
   if (!isComplete.value) return
 
-  if (!hasKey.value) {
-    reading.value = {
-      status: 'done',
-      text: buildLocalReading(picks.value),
-      source: 'local',
-      error: '',
-    }
-    return
-  }
-
   reading.value = { status: 'loading', text: '', source: 'ai', error: '' }
+
   try {
-    await streamReading({
-      apiKey: aiStore.apiKey,
+    await streamReadingViaProxy({
       picks: picks.value,
       onText: (chunk) => {
         reading.value.text += chunk
       },
     })
+    if (!reading.value.text.trim()) throw new Error('빈 응답')
     reading.value.status = 'done'
   } catch (error) {
-    console.error('[tarot] 해석 실패', error)
-    reading.value = {
-      status: 'error',
-      // 이미 흘러온 글이 있으면 버리지 않고 남겨 둔다
-      text: reading.value.text,
-      source: 'ai',
-      error: describeError(error),
-    }
+    // 원인은 콘솔에만 남긴다. 화면에는 읽을 거리가 있으면 된다.
+    console.warn('[tarot] AI 해석을 받지 못해 기본 해설로 대신합니다.', error)
+    fallBackToLocal()
   }
 }
 
@@ -135,22 +153,6 @@ const drawAgain = () => {
   deckVersion.value += 1
 }
 
-/* ── 키 입력 ────────────────────────────────────────────────────── */
-const keyInput = ref('')
-const isKeyPanelOpen = ref(false)
-
-const saveKey = () => {
-  aiStore.setKey(keyInput.value)
-  keyInput.value = ''
-  isKeyPanelOpen.value = false
-  // 이미 세 장을 뽑아 둔 상태라면 바로 AI 해석으로 바꿔 준다
-  if (isComplete.value) requestReading()
-}
-
-const removeKey = () => {
-  aiStore.clearKey()
-  isKeyPanelOpen.value = false
-}
 </script>
 
 <template>
@@ -160,9 +162,7 @@ const removeKey = () => {
       <p class="tarot-eyebrow">DAILY TAROT · 3 CARD SPREAD</p>
       <h1>오늘의 운세</h1>
       <p>{{ formattedDate }} · 잠시 숨을 고르고, 지금 가장 궁금한 것을 떠올려 보세요.</p>
-      <p v-if="!picks.length" class="tarot-cta">
-        아래 78장 중 <b>세 장</b>을 고르면 오늘의 흐름 · 변수 · 조언을 읽어 드립니다.
-      </p>
+      <p class="tarot-cta">{{ introMessage }}</p>
     </section>
 
     <!-- 세 자리 -->
@@ -223,14 +223,9 @@ const removeKey = () => {
 
       <p v-if="reading.text" class="reading-text">{{ reading.text }}</p>
 
-      <p v-if="reading.status === 'error'" class="reading-error">
-        {{ reading.error }}
-        <button type="button" class="ghost-button" @click="requestReading">다시 시도</button>
-      </p>
 
       <p v-if="reading.source === 'local'" class="reading-hint">
-        지금은 카드에 딸린 기본 해설입니다. 아래에 본인 API 키를 넣으면 세 장을 함께 읽은
-        AI 해석을 받을 수 있습니다.
+        카드에 딸린 기본 해설입니다. 세 장을 함께 읽는 AI 해석은 지금 잠시 쉬고 있습니다.
       </p>
     </section>
 
@@ -291,44 +286,6 @@ const removeKey = () => {
       </div>
     </section>
 
-    <!-- API 키 -->
-    <section class="key-panel">
-      <button type="button" class="key-summary" @click="isKeyPanelOpen = !isKeyPanelOpen">
-        <span class="key-value">AI 해석 설정</span>
-        <span class="key-caret" aria-hidden="true">{{ isKeyPanelOpen ? '닫기' : '열기' }}</span>
-      </button>
-
-      <div v-if="isKeyPanelOpen" class="key-body">
-        <p v-if="hasKey" class="key-note faint">현재 등록된 키 · {{ maskedKey }}</p>
-
-        <p class="key-note">
-          키는 <b>이 브라우저에만</b> 저장됩니다. 소스 코드·Git 기록·배포 파일 어디에도 남지
-          않습니다. 다른 사람과 공유하지 마세요.
-        </p>
-
-        <div class="key-form">
-          <input
-            v-model="keyInput"
-            type="password"
-            placeholder="sk-..."
-            autocomplete="off"
-            spellcheck="false"
-            aria-label="OpenAI API 키"
-            @keyup.enter="saveKey"
-          />
-          <button type="button" class="key-save" :disabled="!keyInput.trim()" @click="saveKey">
-            저장
-          </button>
-          <button v-if="hasKey" type="button" class="ghost-button" @click="removeKey">
-            지우기
-          </button>
-        </div>
-
-        <p class="key-note faint">
-          키가 없어도 화면은 그대로 동작합니다 — 이때는 카드에 딸린 기본 해설이 나옵니다.
-        </p>
-      </div>
-    </section>
   </main>
 </template>
 
@@ -347,7 +304,7 @@ const removeKey = () => {
   display: grid;
   gap: 12px;
 }
-.tarot-intro, .spread, .reading, .tarot-deck, .key-panel { border: 1px solid color-mix(in srgb, var(--surface) 75%, transparent); border-radius: 22px; background: color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter: blur(12px); }
+.tarot-intro, .spread, .reading, .tarot-deck { border: 1px solid color-mix(in srgb, var(--surface) 75%, transparent); border-radius: 22px; background: color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter: blur(12px); }
 .tarot-intro { padding: 28px; }
 .tarot-eyebrow, .tarot-kind { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px; color: var(--mystic); font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; }
 h1, h2 { margin: 0; color: var(--ink); font-weight: 600; }
@@ -392,7 +349,6 @@ h2 { font-size: 24px; line-height: 1.25; }
 .reading-wait { margin: 0; color: var(--muted); font-size: 13.5px; }
 .reading-wait::after { content: ''; display: inline-block; width: 7px; height: 7px; margin-left: 6px; border-radius: 50%; background: var(--mystic); animation: pulse 1.1s ease-in-out infinite; vertical-align: middle; }
 @keyframes pulse { 50% { opacity: .25; } }
-.reading-error { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0; padding: 11px 14px; border-left: 3px solid var(--signal); border-radius: 0 10px 10px 0; background: var(--signal-tint); color: var(--ink-soft); font-size: 12.5px; }
 .reading-hint { margin: 0; padding: 11px 14px; border-radius: 10px; background: var(--paper); color: var(--muted); font-size: 12.5px; line-height: 1.7; }
 
 /* ── 카드 고르기 ── */
@@ -432,20 +388,7 @@ h2 { font-size: 24px; line-height: 1.25; }
 @keyframes square-up { 0%, 88% { transform: scale(1); } 94% { transform: scale(.955); } 100% { transform: scale(1); } }
 
 /* ── API 키 ── */
-.key-panel { padding: 0; overflow: hidden; }
-.key-summary { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; width: 100%; padding: 14px 22px; border: 0; background: transparent; cursor: pointer; font: inherit; text-align: left; }
-.key-state { padding: 3px 10px; border-radius: 999px; color: var(--muted); background: var(--paper); font-size: 11px; font-weight: 700; }
 
-.key-value { color: var(--faint); font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
-.key-caret { margin-left: auto; color: var(--muted); font-size: 12px; font-weight: 600; }
-.key-body { display: grid; gap: 12px; padding: 4px 22px 20px; }
-.key-note { margin: 0; color: var(--ink-soft); font-size: 12.5px; line-height: 1.75; }
-.key-note.faint { color: var(--faint); }
-.key-form { display: flex; flex-wrap: wrap; gap: 8px; }
-.key-form input { flex: 1 1 240px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); font: inherit; font-family: var(--font-mono); font-size: 12.5px; }
-.key-form input:focus { border-color: var(--mystic); outline: 0; }
-.key-save { padding: 9px 18px; border: 0; border-radius: 999px; color: #fff; background: var(--mystic); cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; }
-.key-save:disabled { cursor: default; opacity: .45; }
 .ghost-button { padding: 7px 14px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--surface); cursor: pointer; font: inherit; font-size: 12.5px; }
 .ghost-button:hover { border-color: var(--mystic); color: var(--mystic); }
 
