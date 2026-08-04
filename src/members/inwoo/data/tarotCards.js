@@ -24,10 +24,10 @@ const majorArcana = [
 ]
 
 const suits = [
-  { key: 'wands', name: '완드', symbol: '✦', theme: '열정과 성장', color: '#c77932' },
-  { key: 'cups', name: '컵', symbol: '◒', theme: '감정과 관계', color: '#4d8cb7' },
-  { key: 'swords', name: '소드', symbol: '⚔', theme: '생각과 결단', color: '#657587' },
-  { key: 'pentacles', name: '펜타클', symbol: '✺', theme: '현실과 성취', color: '#a88635' },
+  { key: 'wands', name: '완드', theme: '열정과 성장' },
+  { key: 'cups', name: '컵', theme: '감정과 관계' },
+  { key: 'swords', name: '소드', theme: '생각과 결단' },
+  { key: 'pentacles', name: '펜타클', theme: '현실과 성취' },
 ]
 
 const ranks = [
@@ -47,9 +47,29 @@ const ranks = [
   ['King', '킹', '책임감 있는 결정이 신뢰를 만들어 줍니다.'],
 ]
 
-const svgImage = (label, symbol, color) => {
-  const markup = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="960" viewBox="0 0 600 960"><rect width="600" height="960" rx="38" fill="#151426"/><rect x="24" y="24" width="552" height="912" rx="24" fill="#24213a" stroke="#e7c978" stroke-width="6"/><path d="M300 104 333 185 420 194 353 249 373 334 300 290 227 334 247 249 180 194 267 185Z" fill="${color}" opacity=".9"/><circle cx="300" cy="490" r="150" fill="none" stroke="#e7c978" stroke-width="8"/><circle cx="300" cy="490" r="112" fill="none" stroke="${color}" stroke-width="20"/><text x="300" y="535" text-anchor="middle" font-size="130" fill="#fff6da" font-family="serif">${symbol}</text><path d="M110 760 Q300 650 490 760" fill="none" stroke="#e7c978" stroke-width="6"/><text x="300" y="835" text-anchor="middle" font-size="29" fill="#fff6da" font-family="sans-serif">${label}</text><circle cx="74" cy="74" r="10" fill="#e7c978"/><circle cx="526" cy="886" r="10" fill="#e7c978"/></svg>`
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(markup)}`
+/**
+ * 카드 그림 — assets/tarot/ 의 파일 78장.
+ *
+ * import.meta.glob 은 Vite 가 빌드할 때 폴더를 훑어 import 문으로 펼쳐 준다.
+ * eager: true 라 결과가 Promise 가 아니라 값(해시가 붙은 최종 주소)으로 바로 온다.
+ * 파일 이름을 카드 id 와 똑같이 맞춰 뒀으므로 여기서 id 로 바로 찾을 수 있다.
+ *   assets/tarot/major-XIII.jpg  →  id 'major-XIII'
+ *   assets/tarot/cups-ace.jpg    →  id 'cups-ace'
+ */
+const files = import.meta.glob('../assets/tarot/*.jpg', { eager: true, import: 'default' })
+
+const images = Object.fromEntries(
+  Object.entries(files).map(([path, url]) => [path.split('/').pop().replace('.jpg', ''), url]),
+)
+
+/** 카드 뒷면 — 앞면과 같은 덱의 것이라 톤이 맞는다 */
+export const cardBack = images['card-back']
+
+const imageOf = (id) => {
+  const found = images[id]
+  // 파일을 빠뜨렸다면 조용히 깨진 그림을 보여 주는 대신 여기서 바로 알린다
+  if (!found) console.warn(`[tarot] ${id}.jpg 를 assets/tarot/ 에서 찾지 못했습니다.`)
+  return found
 }
 
 const makeMajor = ([number, name, keyword, message]) => ({
@@ -59,7 +79,7 @@ const makeMajor = ([number, name, keyword, message]) => ({
   name,
   keyword,
   message,
-  image: svgImage(name, '✶', '#d8ab52'),
+  image: imageOf(`major-${number}`),
 })
 
 const makeMinor = (suit) =>
@@ -70,7 +90,7 @@ const makeMinor = (suit) =>
     name: `${label} 오브 ${suit.name}`,
     keyword: suit.theme,
     message,
-    image: svgImage(`${label} OF ${suit.name.toUpperCase()}`, suit.symbol, suit.color),
+    image: imageOf(`${suit.key}-${rank.toLowerCase()}`),
   }))
 
 export const tarotCards = [...majorArcana.map(makeMajor), ...suits.flatMap(makeMinor)]

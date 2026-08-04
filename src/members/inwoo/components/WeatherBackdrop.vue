@@ -21,7 +21,7 @@ const props = defineProps({
  * eager로 8장(약 2MB)을 한꺼번에 받으면 첫 화면이 눈에 띄게 느려진다.
  */
 const loaders = Object.fromEntries(
-  Object.entries(import.meta.glob('../assets/photos/*.jpg', { import: 'default' })).map(
+  Object.entries(import.meta.glob('../../../assets/photos/*.jpg', { import: 'default' })).map(
     ([path, load]) => [path.split('/').pop().replace('.jpg', ''), load],
   ),
 )

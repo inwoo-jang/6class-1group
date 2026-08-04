@@ -11,6 +11,12 @@ import { fetchHourly, findCity, toDateKey, shiftDate, DATE_RANGE } from '../data
  */
 const props = defineProps({
   city: { type: Object, default: null },
+  /**
+   * 온도 단위 — 넘기지 않으면 지금까지처럼 섭씨로 보여 준다.
+   * 그래서 이 부품을 쓰는 단계별 결과물 화면은 하나도 바뀌지 않는다.
+   */
+  toUnit: { type: Function, default: (celsius) => celsius },
+  unitSymbol: { type: String, default: '°C' },
 })
 
 const emit = defineEmits(['close'])
@@ -112,7 +118,7 @@ const heightOf = (temp) =>
           {{ city.name }}
           <span v-if="city.region !== city.name" class="sido">{{ city.region }}</span>
         </h4>
-        <p class="current">지금 {{ city.temp }}°C · 습도 {{ city.humidity }}% · {{ city.status }}</p>
+        <p class="current">지금 {{ toUnit(city.temp) }}{{ unitSymbol }} · 습도 {{ city.humidity }}% · {{ city.status }}</p>
       </div>
       <button class="close" type="button" aria-label="닫기" @click="emit('close')">✕</button>
     </header>
@@ -159,8 +165,8 @@ const heightOf = (temp) =>
 
     <template v-else-if="rows.length">
       <p class="axis">
-        <span v-if="isToday">지금 기준 앞뒤 시간 · </span>최저 {{ range.min }}°C ~ 최고
-        {{ range.max }}°C
+        <span v-if="isToday">지금 기준 앞뒤 시간 · </span>최저 {{ toUnit(range.min) }}{{ unitSymbol }} ~
+        최고 {{ toUnit(range.max) }}{{ unitSymbol }}
       </p>
 
       <!-- 가로로 스크롤되는 시간별 막대 -->
@@ -172,7 +178,7 @@ const heightOf = (temp) =>
         >
           <!-- 막대는 바닥을 맞추고 위로 자란다. 숫자도 막대 위에 붙어 함께 오르내린다 -->
           <span class="bar-slot">
-            <span class="temp">{{ row.temp }}°</span>
+            <span class="temp">{{ toUnit(row.temp) }}°</span>
             <span class="bar" :style="{ height: heightOf(row.temp) + 'px' }" />
           </span>
           <WeatherIcon :status="row.status" :size="18" />

@@ -21,7 +21,7 @@ const goHome = () => router.push(link('home'))
       <p class="path">
         찾으신 주소 <code>{{ route.fullPath }}</code>
       </p>
-      <button type="button" @click="goHome">← 메인 대시보드로 돌아가기</button>
+      <button type="button" @click="goHome">← 홈으로 돌아가기</button>
     </div>
   </BaseDashboardCard>
 </template>

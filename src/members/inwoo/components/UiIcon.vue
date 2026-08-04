@@ -64,6 +64,12 @@ defineProps({
       <circle cx="12" cy="10" r="2.6" />
     </template>
 
+    <!-- 새로고침 — 화살촉이 달린 원형 화살표 -->
+    <template v-else-if="name === 'refresh'">
+      <path d="M20 11a8 8 0 1 0-.7 4.3" />
+      <path d="M20 5v6h-6" />
+    </template>
+
     <!-- 체크 -->
     <template v-else-if="name === 'check'">
       <path d="m5 12.5 4.5 4.5L19 7" />

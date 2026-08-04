@@ -19,6 +19,13 @@ const props = defineProps({
   selected: { type: Boolean, default: false },
   /** 오른쪽 버튼 문구. 과제 4에서는 '상세보기'로 쓴다 */
   detailLabel: { type: String, default: '시간별' },
+  /**
+   * 과제 5 — 화면에 찍을 기온과 단위 기호.
+   * 넘기지 않으면 지금까지처럼 cityItem.temp 를 섭씨로 그대로 보여 준다.
+   * 그래서 이 부품을 쓰는 다른 과제 화면은 하나도 바뀌지 않는다.
+   */
+  tempValue: { type: Number, default: null },
+  tempUnit: { type: String, default: '°C' },
 })
 
 // 2. 상위로 송신할 두 가지 경로의 커스텀 이벤트 식별자 등록 (매크로)
@@ -60,6 +67,7 @@ const humidity = computed(() => HUMIDITY_BANDS.find((b) => props.cityItem.humidi
   <div
     class="weather-card"
     :class="{ here, open, selected }"
+    :title="`두 번 누르면 ${cityItem.name} 상세로 갑니다`"
     @click="emit('select-card', cityItem.id)"
   >
     <!-- ① 날씨 — 하늘 상태 -->
@@ -88,7 +96,7 @@ const humidity = computed(() => HUMIDITY_BANDS.find((b) => props.cityItem.humidi
     <div class="metrics">
       <p class="metric" :class="temp.key">
         <UiIcon name="thermometer" :size="15" />
-        <b class="value">{{ cityItem.temp }}<span class="unit">°C</span></b>
+        <b class="value">{{ tempValue ?? cityItem.temp }}<span class="unit">{{ tempUnit }}</span></b>
         <span class="band">{{ temp.label }}</span>
       </p>
       <p class="metric" :class="humidity.key">

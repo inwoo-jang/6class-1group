@@ -5,8 +5,13 @@ import BaseDashboardCard from '../components/BaseDashboardCard.vue'
 import WeatherIcon from '../components/WeatherIcon.vue'
 import HourlyDetail from '../components/HourlyDetail.vue'
 import UiIcon from '../components/UiIcon.vue'
-import { fetchWeather, findCity } from '../data/weatherApi'
+import { fetchCityDetail, fetchWeather, findCity } from '../data/weatherApi'
 import { backdropStatus } from '../data/backdropState'
+import { storeToRefs } from 'pinia'
+import { useConfigStore } from '../stores/configStore'
+
+/** 목록 화면에서 고른 단위를 그대로 이어받는다 — 같은 Store 를 보기 때문이다 */
+const { unitSymbol, toUnit } = storeToRefs(useConfigStore())
 
 /**
  * 도시 상세 — /m/inwoo/weather/:cityId
@@ -25,6 +30,12 @@ const cityId = computed(() => String(route.params.cityId ?? ''))
 const base = computed(() => findCity(cityId.value))
 
 const current = ref(null)
+
+/**
+ * 목록 응답에 없는 관측값(가시거리 · 일출/일몰 · 미세먼지 …).
+ * 45개 도시분을 미리 받아 두면 낭비라, 이 화면에서 이 도시 것만 따로 받는다.
+ */
+const extras = ref({})
 const isLoading = ref(false)
 const errorMessage = ref('')
 
@@ -34,7 +45,9 @@ const load = async () => {
   isLoading.value = true
   errorMessage.value = ''
   try {
-    const { rows } = await fetchWeather()
+    // 목록 조회와 추가 관측값 조회는 서로를 기다릴 이유가 없다
+    const [{ rows }, extra] = await Promise.all([fetchWeather(), fetchCityDetail(base.value)])
+    extras.value = extra
     current.value = rows.find((row) => row.id === cityId.value) ?? null
     // 이 도시의 날씨가 배경이 된다
     backdropStatus.value = current.value?.status ?? ''
@@ -58,6 +71,50 @@ const tone = computed(() => {
 })
 
 /** 한 단계 이전 주소로 (뒤로가기와 같다) */
+/** 값이 있는 항목만 표에 올린다 — 제공자마다 주는 것이 다르다 */
+const observations = computed(() => {
+  if (!current.value) return []
+  const c = {
+    ...extras.value,
+    ...Object.fromEntries(
+      Object.entries(current.value).filter(
+        ([, value]) => value !== null && value !== undefined && value !== '',
+      ),
+    ),
+  }
+  return [
+    {
+      label: '오늘 최저 · 최고',
+      value:
+        c.tempMin != null && c.tempMax != null
+          ? `${toUnit.value(c.tempMin)} · ${toUnit.value(c.tempMax)}${unitSymbol.value}`
+          : null,
+      unit: '',
+    },
+    { label: '강수 확률', value: c.rainChance, unit: '%' },
+    { label: '습도', value: c.humidity, unit: '%' },
+    { label: '미세먼지', value: c.dust, unit: '' },
+    { label: '풍속', value: c.wind, unit: 'm/s' },
+    { label: '가시거리', value: c.visibility, unit: 'km' },
+    { label: '기압', value: c.pressure, unit: 'hPa' },
+    {
+      label: '일출 · 일몰',
+      value: c.sunrise && c.sunset ? `${c.sunrise} · ${c.sunset}` : null,
+      unit: '',
+      small: true,
+    },
+  ].filter((item) => item.value !== null && item.value !== undefined && item.value !== '')
+})
+
+/** 관측 시각 — 표의 값들이 언제 기준인지 밝혀 준다 */
+const observedClock = computed(() => {
+  const at = current.value?.observedAt
+  if (!at) return ''
+  const date = new Date(at)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+})
+
 const goBack = () => router.go(-1)
 </script>
 
@@ -69,7 +126,7 @@ const goBack = () => router.go(-1)
       <p>
         <code>{{ cityId }}</code> 에 해당하는 도시가 없습니다.
       </p>
-      <button type="button" @click="goBack">← 이전 화면으로</button>
+      <el-button round size="small" @click="goBack">← 이전 화면으로</el-button>
     </div>
 
     <template v-else>
@@ -90,38 +147,43 @@ const goBack = () => router.go(-1)
           </p>
         </div>
 
-        <p v-if="current" class="temp">{{ current.temp }}<span class="unit">°C</span></p>
+        <p v-if="current" class="temp">
+          {{ toUnit(current.temp) }}<span class="unit">{{ unitSymbol }}</span>
+        </p>
       </header>
 
       <p v-if="errorMessage" class="error">
         {{ errorMessage }}
-        <button type="button" @click="load">다시 시도</button>
+        <el-button round size="small" type="danger" plain @click="load">다시 시도</el-button>
       </p>
 
-      <dl v-if="current" class="observation">
-        <div>
-          <dt>습도</dt>
-          <dd>{{ current.humidity }}<i>%</i></dd>
-        </div>
-        <div>
-          <dt>권역</dt>
-          <dd class="small">{{ current.group }}</dd>
-        </div>
-        <div>
-          <dt>좌표</dt>
-          <dd class="small">{{ base.lat.toFixed(2) }}, {{ base.lon.toFixed(2) }}</dd>
-        </div>
-      </dl>
+      <template v-if="current">
+        <p class="obs-label">
+          오늘의 관측값
+          <small v-if="observedClock">{{ observedClock }} 기준</small>
+        </p>
+
+        <dl class="observation">
+          <div v-for="item in observations" :key="item.label">
+            <dt>{{ item.label }}</dt>
+            <dd :class="{ small: item.small }">
+              {{ item.value }}<i v-if="item.unit">{{ item.unit }}</i>
+            </dd>
+          </div>
+        </dl>
+      </template>
 
       <!-- 시간별 예보 — 과거 90일 ~ 미래 14일 -->
-      <HourlyDetail v-if="current" :city="current" @close="goBack" />
+      <HourlyDetail
+        v-if="current"
+        :city="current"
+        :to-unit="toUnit"
+        :unit-symbol="unitSymbol"
+        @close="goBack"
+      />
 
       <footer class="foot">
-        <p v-if="route.query.from" class="from">
-          <span class="tag">route.query</span>
-          <code>{{ route.query }}</code>
-        </p>
-        <button type="button" @click="goBack">← 이전 화면으로</button>
+        <el-button round size="small" @click="goBack">← 이전 화면으로</el-button>
       </footer>
     </template>
   </BaseDashboardCard>
@@ -169,8 +231,7 @@ const goBack = () => router.go(-1)
   font-size: 11.5px;
 }
 
-.eyebrow code,
-.from code {
+.eyebrow code {
   padding: 1px 5px;
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -206,6 +267,24 @@ h3 {
   margin-left: 2px;
   color: var(--faint);
   font-size: 16px;
+}
+
+.obs-label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  margin: 0 2px 8px;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.obs-label small {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .observation {
@@ -270,25 +349,6 @@ dd.small {
   align-items: center;
   justify-content: space-between;
   margin-top: 18px;
-}
-
-.from {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.tag {
-  padding: 2px 7px;
-  border-radius: 999px;
-  color: var(--slate);
-  background: var(--slate-tint);
-  font-family: var(--font-mono);
-  font-size: 10.5px;
 }
 
 .missing {

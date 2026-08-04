@@ -15,7 +15,7 @@ const props = defineProps({
 })
 
 /** { sunny: '/assets/sunny-a1b2.png', ... } — 빌드 후 경로로 바뀐다 */
-const icons = import.meta.glob('../assets/weather-icons/*.png', {
+const icons = import.meta.glob('../../../assets/weather-icons/*.png', {
   eager: true,
   import: 'default',
 })
