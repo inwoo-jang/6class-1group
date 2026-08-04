@@ -1,1 +1,0 @@
-import{R as e,V as t,p as n}from"./runtime-core.esm-bundler-36cGDk4R.js";import{t as r}from"./_plugin-vue_export-helper-BDNMzG2s.js";var i={},a={class:`base-dashboard-card`};function o(r,i){return e(),n(`div`,a,[t(r.$slots,`default`,{},void 0,!0)])}var s=r(i,[[`render`,o],[`__scopeId`,`data-v-eae4ed57`]]);export{s as t};
