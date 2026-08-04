@@ -229,6 +229,28 @@ const logout = () => {
   --danger-tint: #2c1d1c;
 }
 
+/*
+ * 판(카드)의 유리 — 뒤의 하늘이 비쳐 보이게 한다.
+ *
+ * 배경에 날씨를 그려 놓고 그 위에 불투명한 판을 덮으면 배경이 있으나 마나다.
+ * 운세 화면은 진작 반투명이었는데 날씨·기록만 꽉 막혀 있어 서로 달라 보였다.
+ *
+ * 값을 여기 한 번만 적어도 되는 이유 —
+ * color-mix 안의 var(--surface) 는 이 줄에서 계산되지 않고 쓰이는 순간
+ * 풀린다. 그래서 밝을 때·어두울 때 각각의 --surface 를 알아서 따라간다.
+ */
+.final {
+  --panel: color-mix(in srgb, var(--surface) 82%, transparent);
+  --panel-line: color-mix(in srgb, var(--surface) 75%, transparent);
+
+  /*
+   * 판 안에 다시 얹히는 줄(날씨 카드 · 기록 항목)은 더 옅게 깐다.
+   * 반투명 위에 반투명을 겹치면 불투명에 가까워져, 겉판만 비치고
+   * 정작 목록이 있는 가운데는 다시 꽉 막힌 것처럼 보이기 때문이다.
+   */
+  --panel-inner: color-mix(in srgb, var(--surface) 55%, transparent);
+}
+
 .final {
   position: relative;
   display: grid;

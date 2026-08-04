@@ -86,7 +86,7 @@ const groups = computed(() => {
   padding: 13px 15px;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: var(--surface);
+  background: var(--panel-inner, var(--surface));
 }
 
 .group-head {

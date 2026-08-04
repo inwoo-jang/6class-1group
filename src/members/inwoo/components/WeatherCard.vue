@@ -140,7 +140,7 @@ const humidity = computed(() => HUMIDITY_BANDS.find((b) => props.cityItem.humidi
   padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: 18px;
-  background: var(--surface);
+  background: var(--panel-inner, var(--surface));
   cursor: pointer;
   transition:
     border-color 0.18s ease,

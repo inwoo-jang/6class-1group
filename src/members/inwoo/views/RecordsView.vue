@@ -277,7 +277,7 @@ h3 {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface);
+  background: var(--panel-inner, var(--surface));
 }
 
 .row {
