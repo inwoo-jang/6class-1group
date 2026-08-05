@@ -428,22 +428,22 @@ const logout = () => {
 
 .nav a.sign {
   padding: 8px 18px;
-  border: 1px solid color-mix(in srgb, var(--slate) 26%, transparent);
-  background: color-mix(in srgb, var(--slate) 11%, transparent);
+  border: 1px solid #bdd3e1;
+  background: #fcfeff;
   backdrop-filter: blur(8px);
-  color: var(--slate);
+  color: #3d8098;
   font-weight: 700;
   transition: background .2s ease, border-color .2s ease, color .2s ease;
 }
 
 .nav a.sign:hover {
-  border-color: color-mix(in srgb, var(--slate) 44%, transparent);
-  background: color-mix(in srgb, var(--slate) 20%, transparent);
-  color: var(--slate-deep);
+  border-color: #6494b3;
+  background: #e6f0f6;
+  color: #2d6278;
 }
 
 .nav a.sign.on {
-  transform: translateY(1px);
+  background: #e6f0f6;
 }
 
 /*
