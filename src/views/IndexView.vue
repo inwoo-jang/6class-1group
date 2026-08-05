@@ -369,23 +369,64 @@ onBeforeUnmount(() => {
   transform: translateY(calc(var(--y) - 8px));
 }
 
-/* 판(카드 배경)을 없앴다. 회색 위에 회색이 얹히면 경계선만 남는다 */
+/*
+ * 판(카드 배경)을 없앴다. 회색 위에 회색이 얹히면 경계선만 남는다.
+ *
+ * 그림자는 평소에도 떠 있다. 빛이 왼쪽 위에서 온다고 보고
+ * 오른쪽 아래 한쪽으로만 떨군다 — 사방으로 퍼뜨리면 붕 뜬 것처럼 보인다.
+ * 두 겹인 이유는, 가까운 그늘이 두께를 만들고 먼 그늘이 높이를 만들기 때문이다.
+ */
 .frame-cell :deep(.poster) {
   height: var(--h);
   aspect-ratio: auto;
   border-radius: 3px;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+  box-shadow:
+    2px 3px 5px -2px rgb(0 0 0 / 14%),
+    6px 14px 26px -12px rgb(0 0 0 / 26%);
   transition: box-shadow 0.7s var(--ease);
 }
 
-/* 아직 안 낸 사람의 칸 — 빈 인화지처럼 조용히 둔다 */
+/* 아직 안 낸 사람의 칸 — 빈 인화지처럼 조용히, 그림자도 한 겹 얕게 */
 .frame-cell.empty :deep(.poster) {
   background: color-mix(in srgb, var(--fg) 4%, var(--page));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 7%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--fg) 7%, transparent),
+    2px 3px 5px -2px rgb(0 0 0 / 8%),
+    5px 10px 18px -10px rgb(0 0 0 / 14%);
 }
 
-.frame-cell:hover :deep(.poster) {
-  box-shadow: 0 18px 40px -18px rgb(0 0 0 / 32%);
+/*
+ * 얹으면 8px 떠오른다(위의 transform). 그림자도 그만큼만 자란다.
+ * 없던 그림자가 갑자기 생기는 게 아니라, 있던 그림자가 조금 길어지는 것이다.
+ */
+.frame-cell:hover :deep(.poster),
+.frame-cell:focus-visible :deep(.poster) {
+  box-shadow:
+    3px 5px 8px -3px rgb(0 0 0 / 16%),
+    10px 22px 38px -14px rgb(0 0 0 / 32%);
+}
+
+.frame-cell.empty:hover :deep(.poster) {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--fg) 7%, transparent),
+    3px 5px 8px -3px rgb(0 0 0 / 10%),
+    8px 18px 30px -12px rgb(0 0 0 / 18%);
+}
+
+/* 어두운 화면에서는 검은 그늘이 묻히므로 더 진하게 떨군다 */
+@media (prefers-color-scheme: dark) {
+  .frame-cell :deep(.poster) {
+    box-shadow:
+      2px 3px 6px -2px rgb(0 0 0 / 45%),
+      7px 16px 30px -12px rgb(0 0 0 / 60%);
+  }
+
+  .frame-cell:hover :deep(.poster),
+  .frame-cell:focus-visible :deep(.poster) {
+    box-shadow:
+      3px 6px 10px -3px rgb(0 0 0 / 50%),
+      11px 24px 44px -14px rgb(0 0 0 / 70%);
+  }
 }
 
 .frame-cell:hover :deep(.poster.live) {
