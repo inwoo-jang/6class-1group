@@ -23,7 +23,7 @@ const props = defineProps({
   ready: { type: Boolean, default: false },
   /** 크기를 부모가 정하는 경우 — 스스로 비율을 고집하지 않는다 */
   free: { type: Boolean, default: false },
-  /** 첫 화면 말고 다른 화면을 걸고 싶을 때 (members.js 의 previewPath) */
+  /** 위치 권한이 없을 때 대신 걸 화면 (members.js 의 previewPath) */
   path: { type: String, default: '' },
 })
 
@@ -39,10 +39,24 @@ const width = ref(0)
 const height = ref(0)
 const seen = ref(false)
 
+/**
+ * 위치 권한이 이미 허용돼 있는가.
+ * ------------------------------------------------------------------
+ * 권한은 사이트 단위다. 누군가의 화면에서 한 번 허용하면 나머지 다섯 사람의
+ * 화면도 같이 허용된 것이 된다 (iframe 에 allow="geolocation" 을 열어 둔 이유).
+ *
+ * 그래서 첫 화면이 위치를 기다리는 사람도, 권한이 이미 있으면 자기 첫 화면을
+ * 그대로 띄우는 것이 맞다 — 진짜 현재 위치가 나온다.
+ * 권한이 없을 때만 대신 걸 화면(previewPath)으로 물러선다. 축소된 그림
+ * 안에서는 "위치 허용" 버튼을 눌러 줄 사람이 없어서 영영 비어 있게 되므로.
+ */
+const locationAllowed = ref(false)
+
 /** 갤러리 껍데기(머리띠·바닥글) 없이 결과물만 나오게 하는 표시 */
-const src = computed(
-  () => `${import.meta.env.BASE_URL}m/${props.slug}${props.path}?preview=1`,
-)
+const src = computed(() => {
+  const path = locationAllowed.value ? '' : props.path
+  return `${import.meta.env.BASE_URL}m/${props.slug}${path}?preview=1`
+})
 
 /**
  * 가로·세로 중 더 많이 필요한 쪽에 맞춘다 (object-fit: cover 와 같은 계산).
@@ -64,9 +78,36 @@ const frameStyle = computed(() => ({
 
 let io = null
 let ro = null
+let permission = null
+
+/**
+ * 물어보지 않고, 이미 있는지만 확인한다.
+ * ------------------------------------------------------------------
+ * permissions.query 는 권한 창을 띄우지 않는다. 알아만 본다.
+ *
+ * 표지에 위치 권한 창이 뜨는 일은 없어야 한다. 여섯 개의 축소된 그림 중
+ * 하나가 조용히 띄우는 권한 창만큼 뜬금없는 것도 없다. 그래서 권한이 이미
+ * 있을 때만 iframe 에 위치를 열어 준다 — 열어 두지 않은 iframe 에서는
+ * 위치를 물어볼 수조차 없으므로, 창이 뜰 길이 막힌다.
+ */
+const checkLocationPermission = async () => {
+  try {
+    permission = await navigator.permissions?.query({ name: 'geolocation' })
+    if (!permission) return
+    locationAllowed.value = permission.state === 'granted'
+    // 다른 화면에서 방금 허용했을 수도 있다 — 그러면 여기도 따라 바뀐다
+    permission.onchange = () => {
+      locationAllowed.value = permission.state === 'granted'
+    }
+  } catch {
+    // 알 수 없으면 없는 것으로 본다
+  }
+}
 
 onMounted(() => {
   if (!props.ready || !box.value) return
+
+  void checkLocationPermission()
 
   // 화면에 들어오기 조금 전부터 미리 받아 둔다
   io = new IntersectionObserver(
@@ -89,6 +130,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   io?.disconnect()
   ro?.disconnect()
+  if (permission) permission.onchange = null
 })
 </script>
 
@@ -105,7 +147,7 @@ onBeforeUnmount(() => {
       aria-hidden="true"
       scrolling="no"
       loading="lazy"
-      allow="geolocation"
+      :allow="locationAllowed ? 'geolocation' : undefined"
     />
 
     <!--
