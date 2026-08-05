@@ -536,7 +536,12 @@ h2 { font-size: 24px; line-height: 1.25; }
 .tarot-shuffle-button { padding: 7px 12px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--ink-soft); background: transparent; cursor: pointer; font: inherit; font-size: 13px; }
 .tarot-shuffle-button:disabled { cursor: wait; opacity: .6; }
 .progress { margin-left: auto; color: var(--faint); font-family: var(--font-mono); font-size: 12px; }
-.tarot-card-grid { display: grid; grid-template-columns: repeat(13, 1fr); gap: 7px; overflow: hidden; transition: opacity .4s ease, transform .4s ease, filter .4s ease; }
+/*
+ * overflow: hidden 이면 hover 로 떠오른 윗줄 카드의 머리가 잘린다.
+ * 대신 사방에 여백을 두르고 같은 크기의 음수 마진으로 되돌린다 —
+ * 카드가 움직일 자리는 생기고, 바깥에서 보이는 크기는 그대로다.
+ */
+.tarot-card-grid { display: grid; grid-template-columns: repeat(13, 1fr); gap: 7px; padding: 14px 10px; margin: -14px -10px; transition: opacity .4s ease, transform .4s ease, filter .4s ease; }
 .tarot-card-grid.shuffling { opacity: .1; transform: scale(.97); filter: blur(1.5px); }
 .tarot-choice { aspect-ratio: 5 / 8; padding: 0; border: 1px solid #e7c978; border-radius: 5px; background: var(--card-back) center / 100% 100% no-repeat; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease, opacity .25s ease; animation: deal-in .42s cubic-bezier(.22, 1, .36, 1) backwards; animation-delay: var(--deal-delay, 0ms); }
 .tarot-choice:hover:not(:disabled), .tarot-choice:focus-visible { z-index: 1; outline: 0; box-shadow: 0 6px 15px #17132555; transform: translateY(-8px) scale(1.12); }
