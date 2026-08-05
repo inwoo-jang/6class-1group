@@ -249,7 +249,7 @@ const saveImage = async () => {
     })
     if (!blob) throw new Error('no blob')
     downloadBlob(blob, `로또번호_${new Date().toLocaleDateString('ko-KR')}.png`)
-    ElMessage.success({ message: '그림으로 저장했어요!', duration: 1600 })
+    ElMessage.success({ message: '이미지로 저장했어요!', duration: 1600 })
   } catch {
     ElMessage.error('그림을 만들지 못했어요. 잠시 뒤 다시 눌러 주세요.')
   } finally {
@@ -376,7 +376,7 @@ const saveImage = async () => {
 
         <div v-if="!isDrawing && !isPending" class="result-acts">
           <button type="button" class="save" :disabled="isMakingImage" @click="saveImage">
-            {{ isMakingImage ? '만드는 중…' : '그림으로 저장' }}
+            {{ isMakingImage ? '만드는 중…' : '이미지로 저장' }}
           </button>
 
           <!-- 로그인해 있으면 알아서 저장된다. 아니면 로그인 안내만 -->
@@ -589,7 +589,7 @@ h3 {
 }
 
 .modes button.on {
-  background: var(--surface);
+  background: var(--panel-strong);
   color: var(--ink);
   box-shadow: 0 2px 6px rgb(40 46 56 / 0.12);
 }
@@ -833,7 +833,7 @@ h3 {
   padding: 10px 18px;
   border: 0;
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--panel-strong);
   color: var(--ink-soft);
   cursor: pointer;
   font: inherit;

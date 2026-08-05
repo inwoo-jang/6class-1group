@@ -5,8 +5,8 @@ import { storeToRefs } from 'pinia'
 import WeatherIcon from '../components/WeatherIcon.vue'
 import UiIcon from '../components/UiIcon.vue'
 import { fetchWeather, nearestCity } from '../components/weatherApi'
-import { backdropStatus } from '../data/backdropState'
 import FortuneCookie from '../components/FortuneCookie.vue'
+import GameStrip from '../components/GameStrip.vue'
 import TestStrip from '../components/TestStrip.vue'
 import { useConfigStore } from '../stores/configStore'
 import { link } from '../routes'
@@ -40,24 +40,6 @@ const here = ref(null)
 const state = ref('idle')
 const isReady = computed(() => state.value === 'ready' && here.value)
 
-/**
- * 위치를 못 얻었을 때 배경이 기대는 도시.
- *
- * 갤러리 목록의 미리보기는 이 홈을 iframe 으로 띄우는데, iframe 안에서는
- * 위치 권한을 물어볼 수 없어 언제 봐도 같은 하늘이었다.
- * 그래서 현재 위치를 모를 때는 이 도시의 날씨로 배경을 채운다.
- */
-const FALLBACK_CITY_ID = 'seongnam'
-
-/** 배경이 따라갈 날씨를 정한다. 현재 위치를 알면 그곳, 모르면 기준 도시 */
-const applyBackdrop = (rows, near) => {
-  const city =
-    (near && rows.find((row) => row.id === near.id)) ??
-    rows.find((row) => row.id === FALLBACK_CITY_ID)
-
-  if (city) backdropStatus.value = city.status
-}
-
 /** 위치를 못 받아도 화면이 막히면 안 되므로, 실패를 null 로 돌려준다 */
 const locate = () =>
   new Promise((resolve) => {
@@ -74,10 +56,6 @@ const load = async () => {
   try {
     // 위치와 날씨는 서로를 기다릴 이유가 없다
     const [near, weather] = await Promise.all([locate(), fetchWeather()])
-
-    // 카드는 현재 위치가 있어야 뜨지만, 배경은 그렇지 않다. 먼저 채운다.
-    applyBackdrop(weather.rows, near)
-
     if (!near) {
       // 거절했거나 시간 안에 못 받았다. 다시 물어볼 수 있는 상태로 둔다.
       state.value = 'ask'
@@ -96,10 +74,6 @@ onMounted(async () => {
   const permission = await navigator.permissions?.query({ name: 'geolocation' }).catch(() => null)
   if (permission?.state === 'denied') {
     state.value = 'blocked'
-    // 카드는 못 띄우지만 배경까지 포기할 이유는 없다 — 기준 도시로 채운다
-    fetchWeather()
-      .then((weather) => applyBackdrop(weather.rows, null))
-      .catch(() => {})
     return
   }
   load()
@@ -183,20 +157,12 @@ const todayNote = computed(() => {
   return { icon: '☁️', text: '흐릿해요. 천천히 시작하기 좋은 날이에요.' }
 })
 
-/** 요약 줄에 쓰는 작은 날씨 표시 */
-const summaryIcon = computed(() => {
-  const status = here.value?.status ?? ''
-  if (status.includes('비') || status.includes('소나기')) return '🌧'
-  if (status.includes('눈')) return '🌨'
-  if (status.includes('맑')) return '☀️'
-  return '☁️'
-})
-
 /** 아래 네 칸 — 이 서비스가 하는 일 전부 */
 const menus = [
   { to: 'weather', icon: 'sun-cloud', tone: 'sky', title: '날씨', desc: '오늘의 날씨와 전국 현황' },
   { to: 'tarot', icon: 'moon-star', tone: 'plum', title: '운세', desc: '타로로 오늘의 운세 보기' },
   { to: 'tests', icon: 'checklist', tone: 'leaf', title: '테스트', desc: '오늘의 심리테스트' },
+  { to: 'games', icon: 'wheel', tone: 'clay', title: '게임', desc: '고민될 땐 운에 맡기기' },
 ]
 
 /** 위치를 허용하면 받을 수 있는 것들 — 권한이 없을 때만 보여 준다 */
@@ -293,14 +259,44 @@ const locationPerks = ['현재 기온', '체감온도', '강수확률', '미세�
     </section>
 
     <TestStrip />
+    <GameStrip />
+
+    <p class="team-link">
+      <a href="https://inwoo-jang.github.io/6class-1group/" target="_blank" rel="noreferrer">
+        팀원 결과물 보러가기 →
+      </a>
+    </p>
   </main>
 </template>
 
 <style scoped>
 /* 카드 사이를 넓게 — 여백이 정보를 정리해 준다 */
+/*
+ * 홈은 한 화면 안에서 끝나야 한다.
+ * 처음 들어와서 스크롤부터 해야 하면 '오늘 한눈에' 라는 말이 무색해진다.
+ * 그래서 여기 여백들은 다른 화면보다 한 단계씩 좁게 잡아 두었다.
+ */
 .home-page {
   display: grid;
-  gap: 18px;
+  gap: 11px;
+}
+
+.team-link {
+  margin: -2px 0 -8px;
+  line-height: 1;
+  text-align: center;
+}
+
+.team-link a {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.team-link a:hover {
+  color: var(--accent);
+  text-decoration: underline;
 }
 
 .hero,
@@ -308,17 +304,24 @@ const locationPerks = ['현재 기온', '체감온도', '강수확률', '미세�
 .menu {
   border: 1px solid color-mix(in srgb, var(--surface) 75%, transparent);
   border-radius: 22px;
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  background: var(--panel);
   backdrop-filter: blur(12px);
 }
 
 /* ── ① 히어로 ── */
+/*
+ * 히어로 — 이 화면의 첫인상.
+ *
+ * 다른 카드보다 여백을 넉넉히 준다. 여기가 빡빡하면 화면 전체가 급해 보인다.
+ * 쿠키 칸은 세로 가운데에 놓고, 쿠키 자신도 그 칸의 가운데에서 조금 위로
+ * 띄워 '떠 있는' 느낌을 만든다 — 아래 안내가 앉을 자리는 그만큼 비워 둔다.
+ */
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 190px;
-  gap: 30px;
+  grid-template-columns: minmax(0, 1fr) 232px;
+  gap: 20px;
   align-items: center;
-  padding: 40px 34px;
+  padding: 28px 34px 26px;
 }
 
 .hero-text {
@@ -333,20 +336,26 @@ const locationPerks = ['현재 기온', '체감온도', '강수확률', '미세�
   letter-spacing: 0.14em;
 }
 
+/* 쿠키는 제 칸 한가운데에 — 오른쪽 끝에 붙어 있으면 카드가 한쪽으로 쏠려 보인다 */
+.hero > .cookie {
+  justify-self: center;
+  width: 178px;
+}
+
 h1 {
   margin: 0;
   color: var(--ink);
-  font-size: clamp(28px, 5.4vw, 38px);
+  font-size: clamp(26px, 4.6vw, 33px);
   font-weight: 700;
-  line-height: 1.28;
+  line-height: 1.3;
   letter-spacing: -0.02em;
 }
 
 .lead {
-  margin: 18px 0 0;
+  margin: 16px 0 0;
   color: var(--ink-soft);
   font-size: 14.5px;
-  line-height: 1.75;
+  line-height: 1.85;
 }
 
 /* ── ② 요약 줄 ── */
@@ -363,7 +372,7 @@ h1 {
   padding: 9px 15px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  background: var(--panel);
   color: var(--ink-soft);
   font-size: 13px;
   font-weight: 600;
@@ -401,8 +410,8 @@ h1 {
 /* ── ③ 현재 위치 ── */
 .place {
   display: grid;
-  gap: 14px;
-  padding: 24px 26px;
+  gap: 7px;
+  padding: 12px 20px;
 }
 
 .place.ready {
@@ -567,17 +576,18 @@ h1 {
 }
 
 /* ── ④ 기능 카드 ── */
+/* 넷이 한 줄에 들어오게. 좁아지면 2×2 로 접힌다 */
 .menus {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
   gap: 12px;
 }
 
 .menu {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   align-content: start;
-  padding: 20px 18px;
+  padding: 12px 14px 13px;
   color: inherit;
   text-decoration: none;
   transition:
@@ -594,10 +604,10 @@ h1 {
 .menu-icon {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  margin-bottom: 10px;
-  border-radius: 13px;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 7px;
+  border-radius: 12px;
 }
 
 .menu-icon.sky {
@@ -615,6 +625,11 @@ h1 {
   color: #2f6b47;
 }
 
+.menu-icon.clay {
+  background: #f4ebe1;
+  color: #96693a;
+}
+
 .menu b {
   color: var(--ink);
   font-size: 15px;
@@ -625,19 +640,6 @@ h1 {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.55;
-}
-
-@media (max-width: 640px) {
-  .hero {
-    grid-template-columns: minmax(0, 1fr);
-    padding: 30px 24px;
-  }
-
-  /* 좁은 화면에서는 쿠키를 작게 가운데로 */
-  .hero > .cookie {
-    width: 170px;
-    justify-self: center;
-  }
 }
 
 @media (max-width: 520px) {
@@ -653,6 +655,128 @@ h1 {
 @media (prefers-reduced-motion: reduce) {
   .menu {
     transition: none;
+  }
+}
+
+/*
+ * 창이 낮을 때 (노트북 1280×800 처럼).
+ * 홈은 스크롤 없이 한 화면에서 끝나야 하므로, 높이가 모자라면 여백과 글자를
+ * 한 단계씩 더 줄인다. 내용을 빼지는 않는다 — 빼면 '오늘 한눈에'가 무너진다.
+ */
+@media (max-height: 860px) {
+  .home-page {
+    gap: 7px;
+  }
+
+  .hero {
+    gap: 18px;
+    padding: 16px 24px;
+  }
+
+  h1 {
+    font-size: clamp(23px, 3.6vw, 28px);
+  }
+
+  .lead {
+    margin-top: 10px;
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+
+  .place {
+    padding: 12px 18px;
+  }
+}
+
+/*
+ * 좁은 화면.
+ *
+ * 손안에서도 '오늘 한눈에' 가 지켜져야 한다 — 테스트 배너까지 한 화면에
+ * 들어오는 것을 목표로 여백·글자·그림을 한 단계씩 줄인다.
+ * 내용을 빼지는 않되, 카드의 설명 줄처럼 없어도 뜻이 통하는 것만 접는다.
+ */
+@media (max-width: 720px) {
+  .home-page {
+    gap: 9px;
+  }
+
+  .hero {
+    /* 쿠키 칸을 '오늘의 포춘 열기' 가 들어갈 만큼은 준다 */
+    grid-template-columns: minmax(0, 1fr) 132px;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  /* 쿠키는 제 칸을 넘지 않는다 — 넘으면 라벨이 히어로 밖으로 삐져나온다 */
+  .hero > .cookie {
+    width: 124px;
+    justify-self: center;
+    transform: translateX(-8px);
+  }
+
+  h1 {
+    font-size: 22px;
+    line-height: 1.32;
+  }
+
+  .lead {
+    margin-top: 8px;
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+
+  .place {
+    padding: 10px 14px;
+  }
+
+  /*
+   * 위치 카드가 화면의 3분의 1을 먹고 있었다.
+   * 받을 수 있는 것들(기온·체감·강수·미세먼지)은 안내일 뿐이라 접고,
+   * 온도는 지역 이름 옆으로 올려 두 줄을 한 줄로 만든다.
+   */
+  .perks {
+    display: none;
+  }
+
+  .connect-hint {
+    font-size: 11.5px;
+    line-height: 1.55;
+  }
+
+  .place.ready {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .place-temp {
+    grid-column: auto;
+  }
+
+  /* 바로가기는 아이콘과 이름만 — 설명은 눌러 보면 안다 */
+  .menus {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .menu {
+    justify-items: center;
+    padding: 10px 6px 11px;
+    text-align: center;
+  }
+
+  .menu small {
+    display: none;
+  }
+
+  .menu-icon {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 5px;
+    border-radius: 11px;
+  }
+
+  .menu b {
+    font-size: 13px;
   }
 }
 </style>

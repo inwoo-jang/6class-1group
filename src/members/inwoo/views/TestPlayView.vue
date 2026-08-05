@@ -82,7 +82,7 @@ const saveImage = async () => {
     const blob = await drawResultCard({ test: test.value, result })
     if (!blob) throw new Error('no blob')
     downloadBlob(blob, `${result.title}_${test.value.short}.png`)
-    ElMessage.success({ message: '그림으로 저장했어요!', duration: 1600 })
+    ElMessage.success({ message: '이미지로 저장했어요!', duration: 1600 })
   } catch {
     ElMessage.error('그림을 만들지 못했어요. 잠시 뒤 다시 눌러 주세요.')
   } finally {
@@ -188,7 +188,7 @@ watch(
   </BaseDashboardCard>
 
   <BaseDashboardCard v-else>
-    <div class="play" :style="{ '--tone': test.accent }">
+    <div class="play" :style="{ '--tone': outcome?.result?.tone ?? test.accent }">
       <!-- ── 머리말 ── -->
       <header class="head">
         <div>
@@ -231,14 +231,12 @@ watch(
       <template v-else-if="outcome?.result">
         <!-- ① 히어로 — 그림과 이름만. 결과를 "받았다"는 느낌이 먼저다 -->
         <section class="hero" aria-live="polite">
-          <span class="pop pop-a" aria-hidden="true">✨</span>
-          <span class="pop pop-b" aria-hidden="true">🎉</span>
-
           <p class="hero-top">내 결과는</p>
 
           <figure v-if="outcome.result.image" class="portrait">
             <img :src="outcome.result.image" :alt="`${outcome.result.title} 그림`" />
-            <figcaption aria-hidden="true">{{ outcome.result.emoji }}</figcaption>
+            <span class="glitter glitter-a" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /></span>
+            <span class="glitter glitter-b" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /></span>
           </figure>
           <p v-else class="portrait-emoji" aria-hidden="true">{{ outcome.result.emoji }}</p>
 
@@ -324,7 +322,7 @@ watch(
         <div class="actions">
           <button type="button" class="primary" :disabled="isMakingImage" @click="saveImage">
             <PictureFilled aria-hidden="true" />
-            {{ isMakingImage ? '만드는 중…' : '그림으로 저장' }}
+            {{ isMakingImage ? '만드는 중…' : '이미지로 저장' }}
           </button>
 
           <!-- 로그인해 있으면 알아서 저장된다. 저장된 뒤에는 보러 가는 길만 둔다 -->
@@ -476,7 +474,7 @@ h3 {
   padding: 14px 16px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--surface);
+  background: var(--panel-strong);
   color: var(--ink-soft);
   cursor: pointer;
   font: inherit;
@@ -535,8 +533,8 @@ h3 {
   padding: 26px 20px 22px;
   border-radius: 26px;
   background:
-    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--tone) 26%, transparent), transparent 70%),
-    linear-gradient(160deg, color-mix(in srgb, var(--tone) 14%, transparent), color-mix(in srgb, var(--tone) 4%, transparent));
+    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--tone) 18%, transparent), transparent 70%),
+    linear-gradient(160deg, color-mix(in srgb, var(--tone) 9%, transparent), color-mix(in srgb, var(--tone) 3%, transparent));
   /*
    * clip 은 넘치는 것만 자르고 자리는 그대로 잡아 준다.
    * hidden 으로 두면 이 상자가 스크롤 컨테이너가 되어, 안에 든 것이 길어졌을 때
@@ -546,19 +544,42 @@ h3 {
   text-align: center;
 }
 
-/* 모서리에 흩뿌린 작은 장식 — 결과가 "터진" 느낌을 준다 */
-.pop {
+/* 결과 그림을 감싸는 여백에서 계속 반짝이는 별빛. */
+.glitter {
   position: absolute;
-  font-size: 20px;
-  opacity: 0.6;
-  animation: float 3.2s ease-in-out infinite;
+  z-index: 2;
+  width: 64px;
+  height: 64px;
+  pointer-events: none;
 }
 
-.pop-a { top: 16px; left: 20px; }
-.pop-b { top: 28px; right: 22px; animation-delay: 0.8s; }
+.glitter i {
+  position: absolute;
+  display: block;
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, #fff, #fff6dc);
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+  filter: drop-shadow(0 0 5px rgb(255 255 255 / 0.95));
+  animation: star-twinkle 2.3s ease-in-out infinite alternate;
+}
 
-@keyframes float {
-  50% { transform: translateY(-6px) rotate(8deg); }
+.glitter i:nth-child(1) { top: 3px; left: 26px; width: 12px; height: 12px; }
+.glitter i:nth-child(2) { top: 25px; left: 3px; width: 7px; height: 7px; background: #fffdf6; animation-delay: 0.35s; }
+.glitter i:nth-child(3) { right: 4px; bottom: 8px; width: 9px; height: 9px; background: #f3edff; animation-delay: 0.7s; }
+.glitter i:nth-child(4) { bottom: 1px; left: 22px; width: 6px; height: 6px; background: #fff1d6; animation-delay: 1.05s; }
+.glitter i:nth-child(5) { top: 13px; right: 1px; width: 5px; height: 5px; background: #e7f6ff; animation-delay: 1.4s; }
+.glitter i:nth-child(6) { top: 42px; left: 12px; width: 5px; height: 5px; background: #fff; animation-delay: 1.75s; }
+.glitter i:nth-child(7) { top: 18px; left: 14px; width: 4px; height: 4px; background: #f7efff; animation-delay: 0.2s; }
+.glitter i:nth-child(8) { right: 16px; bottom: 20px; width: 6px; height: 6px; background: #fff9e8; animation-delay: 1.15s; }
+.glitter i:nth-child(9) { right: 17px; bottom: 2px; width: 4px; height: 4px; background: #eef9ff; animation-delay: 1.9s; }
+
+.portrait .glitter-a { top: -25px; left: -32px; }
+.portrait .glitter-b { right: -32px; bottom: -25px; transform: scale(0.9) rotate(24deg); }
+
+@keyframes star-twinkle {
+  from { opacity: 0.22; transform: scale(0.55) rotate(0); }
+  to { opacity: 1; transform: scale(1.2) rotate(35deg); }
 }
 
 .hero-top {
@@ -574,32 +595,18 @@ h3 {
   width: 176px;
   height: 176px;
   margin: 2px 0 4px;
-  border: 4px solid #fff;
   border-radius: 50%;
-  overflow: hidden;
-  box-shadow: 0 12px 30px color-mix(in srgb, var(--tone) 40%, transparent);
+  overflow: visible;
 }
 
 .portrait img {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-}
-
-.portrait figcaption {
-  position: absolute;
-  right: 6px;
-  bottom: 6px;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border: 3px solid #fff;
+  border: 4px solid #fff;
   border-radius: 50%;
-  background: var(--tone);
-  font-size: 20px;
-  line-height: 1;
+  object-fit: cover;
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--tone) 32%, transparent);
 }
 
 .portrait-emoji {
@@ -842,7 +849,7 @@ blockquote::before {
   padding: 12px 16px;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: var(--surface);
+  background: var(--panel-strong);
 }
 
 .scores summary {
@@ -1002,6 +1009,7 @@ blockquote::before {
 .others a:hover { background: var(--accent-tint); color: var(--accent); }
 
 @media (prefers-reduced-motion: reduce) {
-  .pop { animation: none; }
+  .glitter,
+  .glitter i { animation: none; }
 }
 </style>

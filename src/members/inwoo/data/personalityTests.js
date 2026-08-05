@@ -393,6 +393,7 @@ const animal = {
   results: {
     owl: {
       emoji: '🦉',
+      tone: '#415b7a',
       title: '부엉이형',
       subtitle: '어둠 속에서도 본질을 보는 관찰자',
       keywords: ['통찰', '분석', '독립성'],
@@ -409,6 +410,7 @@ const animal = {
     },
     wolf: {
       emoji: '🐺',
+      tone: '#59616b',
       title: '늑대형',
       subtitle: '혼자도 강하지만 함께일 때 더 강한 수호자',
       keywords: ['책임감', '신뢰', '리더십'],
@@ -425,6 +427,7 @@ const animal = {
     },
     fox: {
       emoji: '🦊',
+      tone: '#c46b32',
       title: '여우형',
       subtitle: '흐름을 읽고 길을 만드는 영리한 탐험가',
       keywords: ['적응력', '창의성', '센스'],
@@ -441,6 +444,7 @@ const animal = {
     },
     bear: {
       emoji: '🐻',
+      tone: '#8b6548',
       title: '곰형',
       subtitle: '쉽게 흔들리지 않는 따뜻한 버팀목',
       keywords: ['안정', '인내', '신뢰'],
@@ -457,6 +461,7 @@ const animal = {
     },
     dolphin: {
       emoji: '🐬',
+      tone: '#438eaa',
       title: '돌고래형',
       subtitle: '사람의 마음을 연결하는 밝은 에너지',
       keywords: ['공감', '소통', '낙관성'],
@@ -473,6 +478,7 @@ const animal = {
     },
     squirrel: {
       emoji: '🐿️',
+      tone: '#ad852e',
       title: '다람쥐형',
       subtitle: '작은 준비를 큰 성과로 만드는 설계자',
       keywords: ['계획', '성실', '성장'],
@@ -489,6 +495,7 @@ const animal = {
     },
     lion: {
       emoji: '🦁',
+      tone: '#bd8125',
       title: '사자형',
       subtitle: '기회를 발견하면 앞으로 나서는 도전자',
       keywords: ['자신감', '용기', '추진력'],
@@ -505,6 +512,7 @@ const animal = {
     },
     swan: {
       emoji: '🦢',
+      tone: '#9488bd',
       title: '백조형',
       subtitle: '잔잔한 겉모습 아래 깊은 감성을 품은 예술가',
       keywords: ['감수성', '섬세함', '진정성'],
@@ -523,6 +531,7 @@ const animal = {
     /* ── 여기부터 원본 기획서에 없던 추가분 ── */
     dog: {
       emoji: '🐶',
+      tone: '#b28b62',
       title: '강아지형',
       subtitle: '마음을 숨기지 않아서 더 믿음이 가는 사람',
       keywords: ['다정함', '솔직함', '충실함'],
@@ -539,6 +548,7 @@ const animal = {
     },
     cat: {
       emoji: '🐱',
+      tone: '#5e6170',
       title: '고양이형',
       subtitle: '가까이 오되 내 속도는 내가 정하는 사람',
       keywords: ['자립', '관찰', '기준'],
@@ -555,6 +565,7 @@ const animal = {
     },
     rabbit: {
       emoji: '🐰',
+      tone: '#bf7e91',
       title: '토끼형',
       subtitle: '먼저 알아차리기 때문에 먼저 준비하는 사람',
       keywords: ['예민함', '기민함', '배려'],
@@ -571,6 +582,7 @@ const animal = {
     },
     penguin: {
       emoji: '🐧',
+      tone: '#668596',
       title: '펭귄형',
       subtitle: '요란하지 않게 끝까지 같이 가는 사람',
       keywords: ['한결같음', '동료애', '지구력'],

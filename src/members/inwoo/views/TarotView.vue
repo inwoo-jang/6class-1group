@@ -1,11 +1,14 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
+import { CopyOutlined, DownloadOutlined } from '@ant-design/icons-vue'
 import { cardBack, tarotCards } from '../data/tarotCards'
 import { READINGS, READING_TYPES, buildReading, composeReading } from '../data/tarotReading'
 import { useAuthStore } from '../stores/authStore'
 import { useRecordStore } from '../stores/recordStore'
+import { downloadBlob, drawTarotCard } from '../utils/resultCard'
 import { link } from '../routes'
 
 /**
@@ -25,6 +28,7 @@ import { link } from '../routes'
  * 세 자리의 뜻도, 해석의 말투도, 서버에 저장될 종류 이름도 여기서 갈린다.
  */
 const activeType = ref(READING_TYPES[0])
+const route = useRoute()
 const config = computed(() => READINGS[activeType.value])
 const spread = computed(() => config.value.spread)
 
@@ -138,6 +142,51 @@ const resetReading = () => {
   savedRecordId.value = 0
 }
 
+const copyPrompt = async () => {
+  const prompt = `[타로 리딩 요청]\n주제: ${activeType.value}\n${picks.value
+    .map((pick, index) => `${spread.value[index].label}: ${pick.card.name} (${pick.reversed ? '역방향' : '정방향'})`)
+    .join('\n')}\n\n세 카드의 흐름을 차분하고 구체적으로 해석해 주세요.`
+  try {
+    await navigator.clipboard.writeText(prompt)
+    ElMessage.success({ message: 'AI 해석 프롬프트를 복사했어요!', duration: 1600 })
+  } catch {
+    ElMessage.warning('브라우저가 복사를 막았습니다.')
+  }
+}
+
+/* ── 그림으로 저장 ───────────────────────────────────────────── */
+const isMakingImage = ref(false)
+
+const saveImage = async () => {
+  if (!isComplete.value || isMakingImage.value) return
+  isMakingImage.value = true
+  try {
+    const composed = reading.value
+    const blob = await drawTarotCard({
+      type: activeType.value,
+      picks: picks.value.map((pick, i) => ({
+        label: composed?.paragraphs?.[i]?.title ?? '',
+        name: pick.card.name,
+        reversed: pick.reversed,
+        image: pick.card.image,
+      })),
+      // 화면에 적힌 해석을 그대로 담는다 (조각을 한 줄로 이어 붙인다)
+      // body 는 이미 한 문장으로 이어진 글이다
+      paragraphs: (composed?.paragraphs ?? []).map((para) => para.body),
+      closing: composed?.closing ?? '',
+    })
+    if (!blob) throw new Error('no blob')
+    downloadBlob(blob, `${activeType.value}_${new Date().toLocaleDateString('ko-KR')}.png`)
+    ElMessage.success({ message: '이미지로 저장했어요!', duration: 1600 })
+  } catch (error) {
+    // 무엇 때문에 실패했는지 남겨 둔다 — 토스트만 뜨면 원인을 알 수 없다
+    console.error('[tarot] 그림 만들기 실패', error)
+    ElMessage.error('그림을 만들지 못했어요. 잠시 뒤 다시 눌러 주세요.')
+  } finally {
+    isMakingImage.value = false
+  }
+}
+
 /* ── 기록 남기기 ────────────────────────────────────────────────── */
 
 /**
@@ -154,6 +203,34 @@ const { isSaving } = storeToRefs(recordStore)
 
 /** 0 이면 아직 저장 전, 값이 있으면 그 기록의 id */
 const savedRecordId = ref(0)
+const isReplay = ref(false)
+
+const restoreReplay = (raw) => {
+  if (!raw) return
+  try {
+    const replay = JSON.parse(raw)
+    if (!READINGS[replay.type] || !Array.isArray(replay.cards) || replay.cards.length !== 3) return
+    const restored = replay.cards
+      .map((saved) => {
+        const card = tarotCards.find((item) => item.id === saved.id)
+        return card ? { card, reversed: Boolean(saved.reversed) } : null
+      })
+      .filter(Boolean)
+    if (restored.length !== 3) return
+    activeType.value = replay.type
+    isReplay.value = true
+    savedRecordId.value = Number(route.query.recordId) || 0
+    picks.value = restored
+  } catch {
+    // 오래된 링크나 잘못된 쿼리는 새 운세를 시작하면 된다
+  }
+}
+
+watch(
+  () => route.query.replay,
+  (replay) => restoreReplay(replay),
+  { immediate: true },
+)
 
 const saveReading = async () => {
   if (!isComplete.value || !readingText.value.trim()) return
@@ -194,7 +271,7 @@ const saveReading = async () => {
 watch(
   [isComplete, readingText, isLoggedIn],
   ([complete, text, loggedIn]) => {
-    if (!complete || !loggedIn) return
+    if (!complete || !loggedIn || isReplay.value) return
     if (!text.trim() || savedRecordId.value || isSaving.value) return
     saveReading()
   },
@@ -227,6 +304,7 @@ const goToDeck = () => {
 }
 
 const drawAgain = () => {
+  isReplay.value = false
   resetReading()
   picks.value = []
   shuffledCards.value = makeShuffledDeck()
@@ -341,6 +419,14 @@ const drawAgain = () => {
 
 
       <div class="save-row">
+        <!-- 뽑은 세 장을 그림 한 장으로 -->
+        <button type="button" class="tarot-act" :disabled="isMakingImage" @click="saveImage">
+          <DownloadOutlined /> {{ isMakingImage ? '만드는 중…' : '이미지로 저장' }}
+        </button>
+        <button type="button" class="tarot-act quiet" @click="copyPrompt">
+          <CopyOutlined /> 프롬프트 복사
+        </button>
+
         <template v-if="!isLoggedIn">
           <p class="save-hint">
             <RouterLink :to="link('login')">로그인</RouterLink>하면 이 운세를 기록으로 남길 수 있습니다.
@@ -445,7 +531,7 @@ const drawAgain = () => {
   display: grid;
   gap: 12px;
 }
-.tarot-intro, .spread, .reading, .tarot-deck { border: 0; border-radius: 22px; box-shadow: 0 1px 2px rgb(30 26 40 / 0.04), 0 10px 30px rgb(30 26 40 / 0.05); background: color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter: blur(12px); }
+.tarot-intro, .spread, .reading, .tarot-deck { border: 0; border-radius: 22px; box-shadow: 0 1px 2px rgb(30 26 40 / 0.04), 0 10px 30px rgb(30 26 40 / 0.05); background: var(--panel); backdrop-filter: blur(12px); }
 /* 머리말에만 아주 옅은 노을을 깐다. 이 화면이 다른 화면과 다른 시간대에 있다는 표시 */
 .tarot-intro {
   padding: 28px;
@@ -503,7 +589,7 @@ h2 { font-size: 24px; line-height: 1.25; }
 .slot-image { display: block; width: 100%; height: 100%; object-fit: cover; }
 .slot-image.reversed { transform: rotate(180deg); }
 .slot-empty { display: grid; width: 100%; height: 100%; gap: 8px; place-content: center; place-items: center; border: 1.5px dashed var(--line-strong); border-radius: 12px; background: color-mix(in srgb, var(--paper) 60%, transparent); transition: border-color .25s ease, background .25s ease; }
-.slot-mark { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; color: var(--faint); background: color-mix(in srgb, var(--surface) 82%, transparent); font-family: var(--font-mono); font-size: 14px; font-weight: 700; }
+.slot-mark { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; color: var(--faint); background: var(--panel); font-family: var(--font-mono); font-size: 14px; font-weight: 700; }
 .slot-wait { color: var(--faint); font-size: 11px; }
 .slot.active .slot-empty { border-color: var(--mystic-line); border-style: solid; background: var(--mystic-soft); animation: breathe 2.2s ease-in-out infinite; }
 .slot.active .slot-mark { color: #fff; background: var(--mystic); }
@@ -579,7 +665,7 @@ h2 { font-size: 24px; line-height: 1.25; }
 @keyframes square-up { 0%, 88% { transform: scale(1); } 94% { transform: scale(.955); } 100% { transform: scale(1); } }
 
 
-.ghost-button { padding: 7px 14px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--surface); cursor: pointer; font: inherit; font-size: 12.5px; }
+.ghost-button { padding: 7px 14px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--panel-strong); cursor: pointer; font: inherit; font-size: 12.5px; }
 .ghost-button:hover { border-color: var(--mystic); color: var(--mystic); }
 
 /* ── 무엇을 물을지 고르는 탭 ── */
@@ -616,10 +702,13 @@ h2 { font-size: 24px; line-height: 1.25; }
 
 /* ── 기록 남기기 ── */
 .save-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 18px; }
+.tarot-act { display: inline-flex; gap: 6px; align-items: center; padding: 7px 14px; border: 1px solid var(--mystic-line); border-radius: 999px; background: transparent; color: var(--mystic); cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 600; }
+.tarot-act:hover:not(:disabled) { background: var(--mystic-soft); }
+.tarot-act:disabled { cursor: default; opacity: 0.6; }
 .save-hint { margin: 0; color: var(--muted); font-size: 12.5px; }
 .save-hint.done { color: var(--mystic); font-weight: 600; }
 .save-hint a { color: var(--mystic); font-weight: 600; }
-.save-type select { padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-soft); cursor: pointer; font: inherit; font-size: 12.5px; }
+.save-type select { padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-strong); color: var(--ink-soft); cursor: pointer; font: inherit; font-size: 12.5px; }
 .save-button { padding: 7px 16px; border: 1px solid var(--mystic); border-radius: 999px; background: var(--mystic); color: var(--on-accent); cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 600; }
 .save-button:disabled { opacity: 0.6; cursor: progress; }
 /* 화면 낭독기에만 읽히는 라벨 */

@@ -128,7 +128,7 @@ const measure = (result) => {
  * @param {object} options.result  결과 (title · subtitle · image · keywords …)
  */
 export const drawResultCard = async ({ test, result }) => {
-  const tone = test.accent || '#5e8a72'
+  const tone = result.tone || test.accent || '#5e8a72'
 
   // 글꼴이 아직 안 왔으면 기본 글꼴로 그려진다. 다 올 때까지 기다린다
   await document.fonts?.ready
@@ -302,74 +302,70 @@ export const drawResultCard = async ({ test, result }) => {
 export const drawFortuneCard = async ({ message, image }) => {
   await document.fonts?.ready
 
+  /*
+   * 휴대폰 배경화면으로 두기 좋게 세로로 그린다.
+   * 9:19.5 는 요즘 폰 화면 비율이다. 글자는 화면 한가운데쯤 오게 두어
+   * 잠금화면의 시계나 위젯과 겹치지 않게 했다.
+   */
+  const W2 = 1080
+  const H2 = 2340
   const tone = '#5e8a72'
-  const measure = document.createElement('canvas').getContext('2d')
-  measure.font = `700 30px ${SANS}`
-  const lines = wrap(measure, message, W - PAD * 2 - 40)
-
-  const cookieH = 200
-  const H = Math.round(96 + cookieH + 56 + lines.length * 44 + 84)
+  const center = W2 / 2
 
   const canvas = document.createElement('canvas')
-  canvas.width = W * SCALE
-  canvas.height = H * SCALE
+  canvas.width = W2
+  canvas.height = H2
   const ctx = canvas.getContext('2d')
-  ctx.scale(SCALE, SCALE)
-  const center = W / 2
 
-  /* 바탕 — 종이 위에 얹힌 느낌으로 */
-  ctx.fillStyle = '#fbf7ef'
-  ctx.fillRect(0, 0, W, H)
-  const band = ctx.createLinearGradient(0, 0, 0, H)
-  band.addColorStop(0, withAlpha(tone, 0.16))
-  band.addColorStop(0.6, withAlpha(tone, 0))
-  ctx.fillStyle = band
-  ctx.fillRect(0, 0, W, H)
+  /* 바탕 — 위는 하늘, 아래는 종이 */
+  const sky = ctx.createLinearGradient(0, 0, 0, H2)
+  sky.addColorStop(0, '#cfe0f2')
+  sky.addColorStop(0.42, '#eef2f4')
+  sky.addColorStop(1, '#f7f3ea')
+  ctx.fillStyle = sky
+  ctx.fillRect(0, 0, W2, H2)
 
-  ctx.fillStyle = withAlpha(tone, 0.07)
+  ctx.fillStyle = withAlpha(tone, 0.08)
   ctx.beginPath()
-  ctx.arc(W + 30, H - 60, 190, 0, Math.PI * 2)
+  ctx.arc(-120, 420, 480, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.arc(W2 + 160, H2 - 420, 520, 0, Math.PI * 2)
   ctx.fill()
 
   /* 머리말 */
   ctx.textAlign = 'center'
-  ctx.fillStyle = withAlpha(tone, 0.95)
-  ctx.font = `700 19px ${SANS}`
-  ctx.fillText("TODAY'S FORTUNE", center, 62)
+  ctx.fillStyle = withAlpha(tone, 0.9)
+  ctx.font = `700 34px ${SANS}`
+  ctx.fillText("TODAY'S FORTUNE", center, 560)
 
   /* 쿠키 */
   const cookie = await loadImage(image)
   if (cookie) {
-    const w = Math.min(W - PAD * 2, (cookie.width / cookie.height) * cookieH)
+    const w = 560
     const h = (cookie.height / cookie.width) * w
     ctx.save()
     ctx.shadowColor = 'rgba(90, 78, 60, 0.28)'
-    ctx.shadowBlur = 26
-    ctx.shadowOffsetY = 12
-    ctx.drawImage(cookie, center - w / 2, 96, w, h)
+    ctx.shadowBlur = 60
+    ctx.shadowOffsetY = 26
+    ctx.drawImage(cookie, center - w / 2, 660, w, h)
     ctx.restore()
   }
 
-  /* 한 줄 */
-  let y = 96 + cookieH + 62
+  /* 한 줄 — 화면 한가운데 */
+  ctx.font = `700 62px ${SANS}`
+  const lines = wrap(ctx, message, W2 - 220)
+  let y = 1420
   ctx.fillStyle = '#2b2f36'
-  ctx.font = `700 30px ${SANS}`
   for (const line of lines) {
     ctx.fillText(line, center, y)
-    y += 44
+    y += 88
   }
 
-  /* 꼬리말 */
-  ctx.fillStyle = 'rgba(120, 126, 136, 0.9)'
-  ctx.font = `600 14px ${SANS}`
-  ctx.fillText('Daily Hub', center, H - 52)
-  ctx.fillStyle = 'rgba(150, 155, 164, 0.9)'
-  ctx.font = `500 13px ${SANS}`
-  ctx.fillText(
-    new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
-    center,
-    H - 28,
-  )
+  /* 꼬리말 — 날짜는 적지 않는다. 배경화면으로 두면 날짜가 금세 어제가 된다 */
+  ctx.fillStyle = 'rgba(120, 126, 136, 0.8)'
+  ctx.font = `600 28px ${SANS}`
+  ctx.fillText('Daily Hub', center, H2 - 150)
 
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
 }
@@ -473,6 +469,153 @@ export const drawLottoCard = async ({ sets }) => {
     new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }),
     center,
     H - 28,
+  )
+
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
+}
+
+/**
+ * 오늘의 운세를 카드로 그린다 — 뽑은 세 장의 그림까지.
+ *
+ * @param {object} options
+ * @param {string} options.type   오늘의 운세 · 솔로연애운 · 커플연애운
+ * @param {Array<{label: string, name: string, reversed: boolean, image: string}>} options.picks
+ * @param {string[]} options.paragraphs  자리별 해석 (짧게 줄여서 넘긴다)
+ * @param {string} options.closing       맺음말
+ */
+export const drawTarotCard = async ({ type, picks, paragraphs = [], closing = '' }) => {
+  await document.fonts?.ready
+
+  const tone = '#6a5c8a'
+  const measure = document.createElement('canvas').getContext('2d')
+
+  /* 먼저 글줄을 접어 높이를 잰다 */
+  measure.font = `500 17px ${SANS}`
+  const blocks = paragraphs.map((text, i) => ({
+    title: picks[i]?.label ?? '',
+    card: picks[i] ? `${picks[i].name}${picks[i].reversed ? ' (역방향)' : ''}` : '',
+    lines: wrap(measure, text, W - PAD * 2),
+  }))
+  measure.font = `600 16px ${SANS}`
+  const closingLines = closing ? wrap(measure, closing, W - PAD * 2 - 30) : []
+
+  const CARD_W = 176
+  const CARD_H = Math.round((CARD_W * 1919) / 1144) // 카드 그림 비율
+  let H = 92 + 30 + CARD_H + 34
+  for (const b of blocks) H += 26 + 24 + b.lines.length * 28
+  if (closingLines.length) H += 22 + 26 + closingLines.length * 28
+  H += 84
+
+  const canvas = document.createElement('canvas')
+  canvas.width = W * SCALE
+  canvas.height = H * SCALE
+  const ctx = canvas.getContext('2d')
+  ctx.scale(SCALE, SCALE)
+  const center = W / 2
+
+  /* 바탕 — 밤에 가까운 보랏빛 */
+  ctx.fillStyle = '#fbfaf8'
+  ctx.fillRect(0, 0, W, H)
+  const band = ctx.createLinearGradient(0, 0, W, 320)
+  band.addColorStop(0, withAlpha('#7a86ab', 0.2))
+  band.addColorStop(1, withAlpha('#c9a68a', 0.16))
+  ctx.fillStyle = band
+  ctx.fillRect(0, 0, W, 320)
+
+  /* 머리말 */
+  ctx.textAlign = 'center'
+  ctx.fillStyle = withAlpha(tone, 0.95)
+  ctx.font = `700 20px ${SANS}`
+  ctx.fillText('DAILY TAROT', center, 52)
+  ctx.fillStyle = '#23272e'
+  ctx.font = `800 30px ${SANS}`
+  ctx.fillText(type, center, 92)
+
+  /* 카드 세 장 */
+  const gap = 18
+  const totalW = picks.length * CARD_W + (picks.length - 1) * gap
+  let x = center - totalW / 2
+  const cardY = 122
+
+  for (const pick of picks) {
+    const image = await loadImage(pick.image)
+    ctx.save()
+    ctx.shadowColor = 'rgba(40, 34, 60, 0.28)'
+    ctx.shadowBlur = 20
+    ctx.shadowOffsetY = 8
+    roundRect(ctx, x, cardY, CARD_W, CARD_H, 12)
+    ctx.fillStyle = '#fff'
+    ctx.fill()
+    ctx.restore()
+
+    ctx.save()
+    roundRect(ctx, x, cardY, CARD_W, CARD_H, 12)
+    ctx.clip()
+    if (image) {
+      // 역방향은 화면과 똑같이 뒤집어 그린다
+      if (pick.reversed) {
+        ctx.translate(x + CARD_W / 2, cardY + CARD_H / 2)
+        ctx.rotate(Math.PI)
+        ctx.drawImage(image, -CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H)
+      } else {
+        ctx.drawImage(image, x, cardY, CARD_W, CARD_H)
+      }
+    } else {
+      ctx.fillStyle = withAlpha(tone, 0.2)
+      ctx.fillRect(x, cardY, CARD_W, CARD_H)
+    }
+    ctx.restore()
+
+    x += CARD_W + gap
+  }
+
+  /* 자리별 해석 */
+  let y = cardY + CARD_H + 34
+  ctx.textAlign = 'left'
+  for (const block of blocks) {
+    ctx.fillStyle = withAlpha(tone, 0.95)
+    ctx.font = `700 13px ${SANS}`
+    ctx.fillText(block.title, PAD, y)
+
+    ctx.fillStyle = '#23272e'
+    ctx.font = `700 17px ${SANS}`
+    ctx.fillText(block.card, PAD + measure.measureText(block.title).width + 46, y)
+
+    y += 24
+    ctx.fillStyle = 'rgba(74, 80, 90, 0.95)'
+    ctx.font = `500 17px ${SANS}`
+    for (const line of block.lines) {
+      ctx.fillText(line, PAD, y)
+      y += 28
+    }
+    y += 26
+  }
+
+  /* 맺음말 */
+  if (closingLines.length) {
+    const boxH = 26 + closingLines.length * 28
+    ctx.fillStyle = withAlpha(tone, 0.12)
+    roundRect(ctx, PAD - 14, y - 22, W - (PAD - 14) * 2, boxH, 16)
+    ctx.fill()
+
+    ctx.fillStyle = withAlpha(tone, 0.95)
+    ctx.font = `600 16px ${SANS}`
+    let ty = y
+    for (const line of closingLines) {
+      ctx.fillText(line, PAD, ty)
+      ty += 28
+    }
+  }
+
+  /* 꼬리말 */
+  ctx.textAlign = 'center'
+  ctx.fillStyle = 'rgba(150, 155, 164, 0.9)'
+  ctx.font = `500 13px ${SANS}`
+  ctx.fillText(
+    new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) +
+      ' · Daily Hub',
+    center,
+    H - 30,
   )
 
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))

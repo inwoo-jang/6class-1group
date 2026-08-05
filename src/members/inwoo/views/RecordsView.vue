@@ -127,7 +127,7 @@ const saveImage = async (record) => {
 
     if (!blob) throw new Error('no blob')
     downloadBlob(blob, `${record.type}_${formatDate(record.createdAt)}.png`)
-    ElMessage.success({ message: '그림으로 저장했어요!', duration: 1500 })
+    ElMessage.success({ message: '이미지로 저장했어요!', duration: 1500 })
   } catch {
     ElMessage.error('그림을 만들지 못했어요.')
   } finally {
@@ -151,6 +151,18 @@ const lottoTone = (n) => {
 /** 카드 세 장을 "정/역"까지 한 줄로 */
 const cardLine = (cards) =>
   (cards ?? []).map((card) => `${card.name}${card.reversed ? '(역)' : ''}`).join(' · ')
+
+const summaryOf = (record) =>
+  String(record.reading ?? '')
+    .replace(/\n+/g, ' ')
+    .split(/[.!?。]/)[0]
+    .trim()
+
+const tarotReplayLink = (record) =>
+  link('tarot', {}, {
+    recordId: record.id,
+    replay: JSON.stringify({ type: record.type, cards: record.cards }),
+  })
 
 onMounted(() => store.load())
 </script>
@@ -268,26 +280,35 @@ onMounted(() => store.load())
           </p>
 
           <!-- ④ 운세 — 뽑은 카드 -->
-          <p v-else-if="record.cards?.length" class="cards">{{ cardLine(record.cards) }}</p>
+          <div v-else-if="record.cards?.length" class="tarot-result">
+            <span class="cards">{{ cardLine(record.cards) }}</span>
+            <small>{{ summaryOf(record) }}</small>
+          </div>
 
           <!-- 로또는 공이 곧 내용이라 설명 줄을 따로 두지 않는다 -->
           <p v-if="!isLotto(record)" class="reading">{{ record.reading }}</p>
 
-          <div class="actions">
-            <button type="button" class="icon" title="글자로 복사" @click="copyOne(record)">
-              <CopyFilled />
-            </button>
-            <button
-              v-if="canDraw(record)"
-              type="button"
-              class="icon"
-              title="그림으로 저장"
-              :disabled="savingId === record.id"
-              @click="saveImage(record)"
-            >
-              <DownloadOutlined />
-            </button>
-            <button type="button" class="danger" @click="confirmRemove(record)">삭제</button>
+          <div class="record-footer">
+            <RouterLink v-if="record.cards?.length" class="replay-link" :to="tarotReplayLink(record)">
+              결과 다시 보기 →
+            </RouterLink>
+
+            <div class="actions">
+              <button type="button" class="icon" title="글자로 복사" @click="copyOne(record)">
+                <CopyFilled />
+              </button>
+              <button
+                v-if="canDraw(record)"
+                type="button"
+                class="icon"
+              title="이미지로 저장"
+                :disabled="savingId === record.id"
+                @click="saveImage(record)"
+              >
+                <DownloadOutlined />
+              </button>
+              <button type="button" class="danger" @click="confirmRemove(record)">삭제</button>
+            </div>
           </div>
         </li>
       </ul>
@@ -338,7 +359,7 @@ h3 {
   padding: 7px 14px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--panel-strong);
   color: var(--muted);
   cursor: pointer;
   font: inherit;
@@ -559,6 +580,12 @@ time {
   font-size: 12.5px;
   font-weight: 600;
 }
+
+.tarot-result { display: grid; gap: 4px; }
+.tarot-result small { overflow: hidden; color: var(--muted); font-size: 12px; line-height: 1.5; text-overflow: ellipsis; white-space: nowrap; }
+.record-footer { display: flex; min-height: 28px; margin-top: 5px; align-items: end; justify-content: space-between; }
+.replay-link { color: var(--accent); font-size: 11.5px; font-weight: 700; text-decoration: none; }
+.replay-link:hover { text-decoration: underline; }
 
 .reading {
   margin: 0;

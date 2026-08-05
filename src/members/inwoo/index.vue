@@ -275,7 +275,7 @@ const logout = () => {
   position: relative;
   display: grid;
   overflow: hidden;
-  min-height: 70vh;
+  min-height: 100dvh;
   padding: 12px;
   border-radius: 16px;
   background: var(--paper);

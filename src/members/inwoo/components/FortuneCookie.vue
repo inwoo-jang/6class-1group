@@ -1,6 +1,7 @@
 <script setup>
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { DownloadOutlined, ShareAltOutlined } from '@ant-design/icons-vue'
 import closedCookie from '../assets/cookie/closed.png'
 import openCookie from '../assets/cookie/open.png'
 import { anotherMessage, messageOfToday } from '../data/fortuneCookie'
@@ -50,6 +51,34 @@ const again = () => {
   }, 220)
 }
 
+/*
+ * 공유 — 주소를 복사해 준다.
+ *
+ * 휴대폰에는 운영체제가 주는 공유창(navigator.share)이 있고, 없는 곳에서는
+ * 클립보드에 넣어 준다. 어느 쪽이든 "받은 한 줄 + 이 사이트 주소"가 간다.
+ */
+const share = async () => {
+  const text = `🥠 ${message.value}`
+  const url = window.location.origin + import.meta.env.BASE_URL
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Daily Hub — 오늘의 포춘', text, url })
+      return
+    } catch {
+      // 공유창을 닫은 경우 — 아래 복사로 넘어가지 않고 조용히 끝낸다
+      return
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(`${text}\n${url}`)
+    ElMessage.success({ message: '링크를 복사했어요!', duration: 1600 })
+  } catch {
+    ElMessage.warning('브라우저가 복사를 막았습니다. 주소창을 직접 복사해 주세요.')
+  }
+}
+
 /* 받은 한 줄을 그림 한 장으로 — 저장해 두거나 보내기 좋게 */
 const isSaving = ref(false)
 
@@ -62,7 +91,7 @@ const saveImage = async () => {
     const blob = await drawFortuneCard({ message: message.value, image: closedCookie })
     if (!blob) throw new Error('no blob')
     downloadBlob(blob, `오늘의포춘_${new Date().toLocaleDateString('ko-KR')}.png`)
-    ElMessage.success({ message: '그림으로 저장했어요!', duration: 1600 })
+    ElMessage.success({ message: '이미지로 저장했어요!', duration: 1600 })
   } catch {
     ElMessage.error('그림을 만들지 못했어요. 잠시 뒤 다시 눌러 주세요.')
   } finally {
@@ -137,11 +166,26 @@ onBeforeUnmount(() => {
             <p class="say">{{ message }}</p>
 
             <div class="acts">
-              <button type="button" class="ghost" @click="again">하나 더</button>
-              <button type="button" class="ghost" :disabled="isSaving" @click="saveImage">
-                {{ isSaving ? '만드는 중…' : '그림으로 저장' }}
-              </button>
-              <button type="button" class="solid" @click="close">잘 받았어요</button>
+              <div class="tools" aria-label="포춘 저장 및 공유">
+                <button
+                  type="button"
+                  class="tool"
+                  :disabled="isSaving"
+                  aria-label="이미지로 저장"
+                  @click="saveImage"
+                >
+                  <DownloadOutlined />
+                  <span class="tool-label">{{ isSaving ? '만드는 중' : '저장' }}</span>
+                </button>
+                <button type="button" class="tool" aria-label="공유" @click="share">
+                  <ShareAltOutlined />
+                  <span class="tool-label">공유</span>
+                </button>
+              </div>
+              <div class="main-acts">
+                <button type="button" class="ghost" @click="again">하나 더</button>
+                <button type="button" class="solid" @click="close">잘 받았어요</button>
+              </div>
             </div>
           </div>
         </div>
@@ -336,7 +380,7 @@ onBeforeUnmount(() => {
   width: min(460px, 100%);
   padding: 26px 24px 22px;
   border-radius: 26px;
-  background: var(--surface);
+  background: var(--panel-strong);
   box-shadow: 0 30px 70px rgb(0 0 0 / 0.35);
   text-align: center;
 }
@@ -439,17 +483,34 @@ onBeforeUnmount(() => {
 }
 
 /* ── 버튼 ── */
-.acts {
+.acts { display: grid; gap: 14px; }
+.tools { display: flex; gap: 16px; justify-content: center; }
+.tools .tool {
   display: flex;
-  gap: 8px;
+  min-width: 42px;
+  min-height: 40px;
+  padding: 0;
+  align-items: center;
+  flex-direction: column;
   justify-content: center;
+  gap: 3px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  font-size: 15px;
 }
-
-.acts button {
+.tool-label { color: var(--faint); font-size: 11px; line-height: 1; white-space: nowrap; }
+.tools .tool:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.tools .tool:hover .tool-label { color: var(--ink); }
+.tools .tool:disabled { cursor: wait; opacity: .5; }
+.main-acts { display: flex; gap: 8px; justify-content: center; }
+.main-acts button {
   padding: 11px 20px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--panel-strong);
   color: var(--muted);
   cursor: pointer;
   font: inherit;
@@ -457,13 +518,13 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
-.acts .solid {
+.main-acts .solid {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--on-accent);
 }
 
-.acts button:hover {
+.main-acts button:hover {
   opacity: 0.88;
 }
 
@@ -511,11 +572,31 @@ onBeforeUnmount(() => {
 /* 좁은 화면 — 라벨이 쿠키 칸을 넘어가면 히어로 밖으로 삐져나온다 */
 @media (max-width: 720px) {
   .label {
-    right: 0;
-    left: 0;
-    padding: 5px 8px;
-    font-size: 10.5px;
+    right: -18px;
+    left: -18px;
+    padding: 9px 12px;
+    font-size: 11.5px;
     letter-spacing: -0.03em;
   }
+}
+
+:global(:root[data-theme='blueprint']) .label {
+  border-color: rgb(220 243 255 / 0.8);
+  background:
+    linear-gradient(
+      110deg,
+      rgb(112 151 178 / 0.58) 0%,
+      rgb(88 137 166 / 0.62) 42%,
+      rgb(118 168 191 / 0.6) 100%
+    );
+  box-shadow:
+    0 9px 24px rgb(77 123 151 / 0.24),
+    inset 0 1px 0 rgb(255 255 255 / 0.48);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .tools { gap: 18px; }
+  .tools .tool { min-width: 48px; min-height: 46px; font-size: 17px; }
+  .tool-label { font-size: 11.5px; }
 }
 </style>
