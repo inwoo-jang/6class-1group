@@ -11,6 +11,10 @@
  *
  * 화면에 보이는 것은 그대로다 — 색도, 여백도, 그림자도 손대지 않았다.
  */
+// 아이콘 글꼴. 이 화면 곳곳에서 <i class="fa-solid ..."> 로 쓴다 —
+// 불러 두지 않으면 아이콘 자리가 전부 빈칸이 된다
+import '@fortawesome/fontawesome-free/css/all.min.css'
+
 import { RouterLink, RouterView } from 'vue-router'
 import FeedbackWidget from '@/members/gayeon/components/exercise/FeedbackWidget.vue'
 import { useAuthStore } from '@/members/gayeon/stores/authStore'
@@ -97,6 +101,32 @@ const handleLogout = () => {
   box-sizing: border-box;
   margin: 0;
   font-weight: normal;
+}
+
+/*
+ * 아이콘 글꼴은 굵기로 모양을 고른다 — Solid 는 900, Regular 와 Brands 는 400.
+ * 위의 리셋이 전부 normal 로 눕히면 Solid 아이콘을 Regular 글꼴에서 찾게 되고,
+ * 거기 없는 것은 빈 네모로 나온다.
+ *
+ * ::before 까지 함께 세워야 한다. 아이콘은 그 자리에 그려지는데, 위의 리셋이
+ * 가상 요소를 콕 집어 눕히므로 부모에게서 굵기를 물려받지 못한다.
+ */
+.gayeon-app .fa-solid,
+.gayeon-app .fa-solid::before,
+.gayeon-app .fas,
+.gayeon-app .fas::before {
+  font-weight: 900;
+}
+
+.gayeon-app .fa-regular,
+.gayeon-app .fa-regular::before,
+.gayeon-app .far,
+.gayeon-app .far::before,
+.gayeon-app .fa-brands,
+.gayeon-app .fa-brands::before,
+.gayeon-app .fab,
+.gayeon-app .fab::before {
+  font-weight: 400;
 }
 
 .gayeon-app a {
