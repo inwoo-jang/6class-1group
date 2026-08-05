@@ -1,4 +1,4 @@
-const TOUR_BASE = '/api/tour/searchFestival2'
+const TOUR_BASE = 'https://apis.data.go.kr/B551011/KorService2/searchFestival2'
 
 const parseDate = (yyyymmdd) => {
   if (!yyyymmdd || yyyymmdd.length !== 8) return null
