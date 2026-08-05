@@ -12,6 +12,9 @@
  * accent   카드 포스터에 쓰는 색 하나
  * live     따로 배포한 주소가 있으면 적는다. 없으면 비워 둔다
  * bottomClearance  화면 하단에 고정 UI가 있는 경우 footer 아래에 남길 공간 (선택)
+ * previewPath      표지 카드에 띄울 화면 (선택). '/m/<slug>' 뒤에 붙는다.
+ *                  첫 화면이 위치 권한이나 로그인을 기다리는 사람만 적으면 된다 —
+ *                  카드는 축소된 그림이라 아무도 그 안에서 버튼을 누를 수 없다.
  *
  * "결과물이 들어왔는지"는 여기 적지 않는다.
  * src/members/<slug>/ 폴더가 있으면 있는 것이고, 없으면 없는 것이다.
@@ -62,6 +65,8 @@ export const MEMBERS = [
     stack: ['Vue Router', 'Pinia', 'Axios', 'Element Plus'],
     accent: '#3f6665',
     bottomClearance: '76px',
+    // 첫 화면이 위치 권한을 기다린다 — 카드에서는 눌러 줄 사람이 없으므로 서울로 띄운다
+    previewPath: '/weather/city_01',
     live: '',
   },
   {

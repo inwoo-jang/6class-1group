@@ -1,5 +1,7 @@
 import axios from 'axios'
 
+import { fetchForecast as fetchSharedForecast } from '../../openMeteo.js'
+
 export { MissingWeatherApiKeyError } from './weatherErrors.js'
 
 const API_URL = 'https://api.openweathermap.org/data/2.5/weather'
@@ -360,23 +362,20 @@ const fetchOpenMeteoPayload = (city) => {
   const activeRequest = openMeteoRequests.get(requestKey)
   if (activeRequest) return activeRequest
 
-  const request = axios
-    .get(OPEN_METEO_API_URL, {
-      params: {
-        latitude: city.latitude,
-        longitude: city.longitude,
-        current: OPEN_METEO_CURRENT_FIELDS,
-        hourly: OPEN_METEO_HOURLY_FIELDS,
-        daily: OPEN_METEO_DAILY_FIELDS,
-        timezone: 'auto',
-        timeformat: 'unixtime',
-        forecast_days: DAILY_FORECAST_LIMIT,
-        forecast_hours: 24,
-        wind_speed_unit: 'ms',
-      },
-      timeout: 8000,
-    })
-    .then((response) => response.data)
+  // 팀 공용 창구를 거친다 — 표지의 미리보기 여섯 개가 받아 둔 값을 나눠 쓰므로
+  // Open-Meteo 하루 한도에 닿지 않고, 막히더라도 지난번 값으로 화면이 버틴다.
+  const request = fetchSharedForecast({
+    latitude: city.latitude,
+    longitude: city.longitude,
+    current: OPEN_METEO_CURRENT_FIELDS,
+    hourly: OPEN_METEO_HOURLY_FIELDS,
+    daily: OPEN_METEO_DAILY_FIELDS,
+    timezone: 'auto',
+    timeformat: 'unixtime',
+    forecast_days: DAILY_FORECAST_LIMIT,
+    forecast_hours: 24,
+    wind_speed_unit: 'ms',
+  })
     .finally(() => {
       if (openMeteoRequests.get(requestKey) === request) openMeteoRequests.delete(requestKey)
     })

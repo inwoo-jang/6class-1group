@@ -278,6 +278,7 @@ onBeforeUnmount(() => {
           :name="item.name"
           :accent="item.accent"
           :ready="item.ready"
+          :path="item.previewPath ?? ''"
           free
         />
 

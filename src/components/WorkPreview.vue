@@ -23,6 +23,8 @@ const props = defineProps({
   ready: { type: Boolean, default: false },
   /** 크기를 부모가 정하는 경우 — 스스로 비율을 고집하지 않는다 */
   free: { type: Boolean, default: false },
+  /** 첫 화면 말고 다른 화면을 걸고 싶을 때 (members.js 의 previewPath) */
+  path: { type: String, default: '' },
 })
 
 /**
@@ -38,7 +40,9 @@ const height = ref(0)
 const seen = ref(false)
 
 /** 갤러리 껍데기(머리띠·바닥글) 없이 결과물만 나오게 하는 표시 */
-const src = computed(() => `${import.meta.env.BASE_URL}m/${props.slug}?preview=1`)
+const src = computed(
+  () => `${import.meta.env.BASE_URL}m/${props.slug}${props.path}?preview=1`,
+)
 
 /**
  * 가로·세로 중 더 많이 필요한 쪽에 맞춘다 (object-fit: cover 와 같은 계산).
@@ -101,6 +105,7 @@ onBeforeUnmount(() => {
       aria-hidden="true"
       scrolling="no"
       loading="lazy"
+      allow="geolocation"
     />
 
     <!--

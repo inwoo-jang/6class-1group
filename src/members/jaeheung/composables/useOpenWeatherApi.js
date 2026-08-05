@@ -8,6 +8,7 @@
 // 화면과 다른 composable 은 이 파일만 부르므로, 어느 쪽에서 온 값인지 모른다.
 // 아래 함수들의 반환 모양이 두 경로에서 같기 때문이다.
 import axios from 'axios'
+import { fetchForecast } from '../../openMeteo.js'
 
 const WEATHER_URL = 'https://api.openweathermap.org/data/2.5/weather'
 const GEOCODE_URL = 'https://api.openweathermap.org/geo/1.0/direct'
@@ -65,13 +66,13 @@ export async function fetchOpenWeatherByCoords(lat, lon) {
 
 /** 키가 없을 때의 현재 날씨 — 위와 같은 모양으로 돌려준다 */
 async function fetchFromOpenMeteo(lat, lon) {
-  const { data } = await axios.get(OM_FORECAST_URL, {
-    params: {
-      latitude: lat,
-      longitude: lon,
-      current: 'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m',
-      timezone: 'auto',
-    },
+  // 팀 공용 창구를 거친다 — 표지의 미리보기 여섯 개가 같은 값을 나눠 쓰고,
+  // Open-Meteo 가 하루 한도로 막히면 met.no 가 대신 답한다.
+  const data = await fetchForecast({
+    latitude: lat,
+    longitude: lon,
+    current: 'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m',
+    timezone: 'auto',
   })
 
   const now = data.current ?? {}
