@@ -9,6 +9,9 @@ import { memberLink } from '../link'
  *   /m/inwoo/weather          날씨 — 전국 도시 오늘 현황
  *   /m/inwoo/weather/:cityId  도시 상세 + 시간별 예보
  *   /m/inwoo/tarot            운세 — 타로 세 장으로 보는 오늘
+ *   /m/inwoo/games            게임 — 룰렛 · 로또 번호 뽑기
+ *   /m/inwoo/tests            테스트 — 룰 기반 심리테스트
+ *   /m/inwoo/admin            관리자 — 전체 기록 관리 (role: ADMIN)
  *   /m/inwoo/login            로그인 — 운세 기록을 남기려면 필요하다
  *   /m/inwoo/records          내 운세 기록 (로그인한 사람만)
  *
@@ -51,6 +54,21 @@ export default [
     component: () => import('./views/TarotView.vue'),
   },
   {
+    path: 'games',
+    name: 'games',
+    component: () => import('./views/GamesView.vue'),
+  },
+  {
+    path: 'games/roulette',
+    name: 'roulette',
+    component: () => import('./views/RouletteView.vue'),
+  },
+  {
+    path: 'games/lotto',
+    name: 'lotto',
+    component: () => import('./views/LottoView.vue'),
+  },
+  {
     path: 'tests',
     name: 'tests',
     component: () => import('./views/TestsView.vue'),
@@ -60,6 +78,26 @@ export default [
     path: 'tests/:testId',
     name: 'test',
     component: () => import('./views/TestPlayView.vue'),
+  },
+  {
+    // 관리자만 — meta.requiresAdmin 을 라우터 가드가 확인한다
+    path: 'admin',
+    name: 'admin',
+    component: () => import('./views/AdminView.vue'),
+    /*
+     * 관리자만. 갤러리의 가드는 meta.auth 하나만 보므로 로그인과 권한을
+     * 여기서 함께 확인한다 — 관리자가 아니면 로그인 화면으로 돌려보낸다.
+     * 진짜로 막는 곳은 서버(와 브라우저 폴백)로, 토큰의 role 을 보고 403 을 준다.
+     */
+    meta: {
+      requiresAuth: true,
+      auth: async () => {
+        const { useAuthStore } = await import('./stores/authStore')
+        const auth = useAuthStore()
+        await auth.restore()
+        return auth.isLoggedIn && auth.isAdmin
+      },
+    },
   },
   {
     path: 'login',

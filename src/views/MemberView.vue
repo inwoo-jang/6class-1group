@@ -43,7 +43,7 @@ watch(
 </script>
 
 <template>
-  <div class="member" :class="{ preview: isPreview }" :style="memberStyle">
+  <div class="member" :class="[{ preview: isPreview }, `member-${slug}`]" :style="memberStyle">
     <SiteHeader v-if="!isPreview" :here="member?.name ?? slug" :live="member?.live ?? ''" />
 
     <!-- 결과물이 들어온 경우 — 자리만 내주고 아무 것도 덧그리지 않는다 -->
@@ -95,6 +95,16 @@ watch(
   overflow: hidden;
   pointer-events: none;
   user-select: none;
+}
+
+/* 인우 화면은 날씨 배경 자체가 무대다. 갤러리 카드 여백·그림자를 빼고 화면 끝까지 붙인다. */
+.member.member-inwoo:not(.preview) {
+  gap: 0;
+  padding: 0;
+}
+
+.member.member-inwoo:not(.preview) .stage {
+  box-shadow: none;
 }
 
 /*

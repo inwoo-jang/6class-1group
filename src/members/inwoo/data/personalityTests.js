@@ -25,12 +25,28 @@ const collect = (files) =>
     Object.entries(files).map(([path, url]) => [path.split('/').pop().replace('.jpg', ''), url]),
   )
 
+/**
+ * 칩에 붙는 작은 얼굴.
+ *
+ * 이모지는 기기마다 그림이 달라 목록에 넷을 늘어놓으면 결이 어긋난다.
+ * 각 테스트의 사진·아이콘에서 얼굴만 동그랗게 잘라 두고 그걸 쓴다.
+ */
+const chips = collect(
+  import.meta.glob('../assets/tests/chips/*.jpg', { eager: true, import: 'default' }),
+)
+
 const art = {
   animal: collect(
     import.meta.glob('../assets/tests/animal/*.jpg', { eager: true, import: 'default' }),
   ),
   zombie: collect(
     import.meta.glob('../assets/tests/zombie/*.jpg', { eager: true, import: 'default' }),
+  ),
+  message: collect(
+    import.meta.glob('../assets/tests/message/*.jpg', { eager: true, import: 'default' }),
+  ),
+  story: collect(
+    import.meta.glob('../assets/tests/story/*.jpg', { eager: true, import: 'default' }),
   ),
 }
 
@@ -44,6 +60,7 @@ const zombie = {
   short: '좀비 사태 생존 역할',
   description: '위기 상황에서 드러나는 생존 본능을 확인합니다. 단, 살아남는다는 보장은 없습니다.',
   accent: '#7d3b3b',
+  hasResultArt: true,
 
   questions: [
     {
@@ -139,7 +156,7 @@ const zombie = {
       facts: [{ label: '생존 확률', value: '86%' }],
       strengths: ['리더십', '책임감', '판단력'],
       cautions: ['모두를 구하려다 위험해짐'],
-      match: '현실 생존왕',
+      match: { who: '현실 생존왕', why: '큰 그림을 그리는 나와, 당장 손을 쓰는 쪽이 만나면 계획이 실제로 굴러갑니다.' },
       shareText: '좀비 사태에서도 단톡방 공지부터 올릴 리더형.',
     },
     strategist: {
@@ -151,7 +168,7 @@ const zombie = {
       facts: [{ label: '생존 확률', value: '82%' }],
       strengths: ['분석력', '위험 감지', '계획성'],
       cautions: ['답답한 팀원을 견디지 못함'],
-      match: '생존팀 리더',
+      match: { who: '생존팀 리더', why: '방향을 정해 주는 사람이 옆에 있으면, 내가 잘하는 일에만 집중할 수 있습니다.' },
       shareText: '좀비보다 ‘일단 가보자’는 팀원이 더 무섭다.',
     },
     supplier: {
@@ -163,7 +180,7 @@ const zombie = {
       facts: [{ label: '생존 확률', value: '91%' }],
       strengths: ['현실 감각', '준비성', '자원 관리'],
       cautions: ['식량을 숨겨뒀다는 의심을 받을 수 있음'],
-      match: '제작자',
+      match: { who: '제작자', why: '말로 정한 것을 물건으로 만들어 주는 쪽이라, 내 판단이 눈에 보이는 결과가 됩니다.' },
       shareText: '세상을 구하진 못해도 통조림 유통기한은 지킨다.',
     },
     crafter: {
@@ -175,7 +192,7 @@ const zombie = {
       facts: [{ label: '생존 확률', value: '89%' }],
       strengths: ['창의성', '손재주', '문제 해결력'],
       cautions: ['완성 직전까지 현장을 떠나지 않음'],
-      match: '현실 생존왕',
+      match: { who: '현실 생존왕', why: '큰 그림을 그리는 나와, 당장 손을 쓰는 쪽이 만나면 계획이 실제로 굴러갑니다.' },
       shareText: '좀비보다 먼저 집 리모델링을 끝내는 제작자형.',
     },
     stealth: {
@@ -187,7 +204,7 @@ const zombie = {
       facts: [{ label: '생존 확률', value: '94%' }],
       strengths: ['관찰력', '민첩함', '독립성'],
       cautions: ['팀원들이 이미 당신을 실종 처리함'],
-      match: '전략가',
+      match: { who: '전략가', why: '앞을 내다보는 쪽과 몸이 먼저 나가는 쪽이 짝이 되면, 무모함이 준비로 바뀝니다.' },
       shareText: '시즌 내내 안 보이다 마지막 회에 멀쩡히 등장.',
     },
     moodmaker: {
@@ -199,7 +216,7 @@ const zombie = {
       facts: [{ label: '생존 확률', value: '63%' }],
       strengths: ['긍정성', '친화력', '정신력'],
       cautions: ['웃기려고 위험한 행동을 할 수 있음'],
-      match: '생존팀 리더',
+      match: { who: '생존팀 리더', why: '방향을 정해 주는 사람이 옆에 있으면, 내가 잘하는 일에만 집중할 수 있습니다.' },
       shareText: '좀비한테 쫓기면서도 상황극하는 예능 담당.',
     },
     hidden_bite: {
@@ -211,7 +228,7 @@ const zombie = {
       facts: [{ label: '생존 확률', value: '21%' }],
       strengths: ['연기력', '순간 대처', '강한 생존 욕구'],
       cautions: ['바로 그 상처'],
-      match: '격리를 잘하는 전략가',
+      match: { who: '격리를 잘하는 전략가', why: '거리를 둘 줄 아는 사람이라, 조용히 움직이는 내 방식과 부딪히지 않습니다.' },
       shareText: '나 안 물렸어. 진짜야. 근데 왜 이렇게 덥지?',
     },
     first_zombie: {
@@ -226,7 +243,7 @@ const zombie = {
       ],
       strengths: ['빠른 결단', '엄청난 행동력', '초반 임팩트'],
       cautions: ['상황 판단보다 몸이 먼저 움직임'],
-      match: '없음. 이미 물었습니다.',
+      match: { who: '없음. 이미 물었습니다.', why: '아쉽지만 여기서 끝입니다. 다음 생에 다시 만나요.' },
       shareText: '매도 먼저 맞자! 시작 3분 만에 좀비가 됐습니다.',
     },
   },
@@ -253,6 +270,7 @@ const animal = {
   description:
     '관계, 선택, 스트레스와 도전에 반응하는 방식을 통해 나와 가장 닮은 동물을 찾습니다.',
   accent: '#2f5d50',
+  hasResultArt: true,
 
   questions: [
     {
@@ -375,6 +393,7 @@ const animal = {
   results: {
     owl: {
       emoji: '🦉',
+      tone: '#415b7a',
       title: '부엉이형',
       subtitle: '어둠 속에서도 본질을 보는 관찰자',
       keywords: ['통찰', '분석', '독립성'],
@@ -386,11 +405,12 @@ const animal = {
       ],
       strengths: ['분석력', '집중력', '통찰력'],
       cautions: ['생각이 너무 많아 행동이 늦어질 수 있음'],
-      match: '돌고래, 다람쥐',
+      match: { who: '돌고래, 다람쥐', why: '분위기를 띄우는 돌고래와 부지런한 다람쥐 곁에서, 묵직한 내 판단이 더 잘 쓰입니다.' },
       shareText: '모든 답을 확인한 뒤에만 움직일 필요는 없습니다.',
     },
     wolf: {
       emoji: '🐺',
+      tone: '#59616b',
       title: '늑대형',
       subtitle: '혼자도 강하지만 함께일 때 더 강한 수호자',
       keywords: ['책임감', '신뢰', '리더십'],
@@ -402,11 +422,12 @@ const animal = {
       ],
       strengths: ['충성심', '추진력', '보호 본능'],
       cautions: ['모든 짐을 혼자 들 수 있음'],
-      match: '곰, 돌고래',
+      match: { who: '곰, 돌고래', why: '넉넉히 받아 주는 곰과 유쾌한 돌고래는, 예민한 감각을 편하게 풀어 놓게 해 줍니다.' },
       shareText: '도움을 요청해도 당신의 강함은 줄어들지 않습니다.',
     },
     fox: {
       emoji: '🦊',
+      tone: '#c46b32',
       title: '여우형',
       subtitle: '흐름을 읽고 길을 만드는 영리한 탐험가',
       keywords: ['적응력', '창의성', '센스'],
@@ -418,11 +439,12 @@ const animal = {
       ],
       strengths: ['유연성', '아이디어', '순발력'],
       cautions: ['반복되는 일에 쉽게 흥미를 잃음'],
-      match: '사자, 부엉이',
+      match: { who: '사자, 부엉이', why: '앞장서는 사자와 깊이 보는 부엉이 사이에서, 빠른 내 발이 헛돌지 않습니다.' },
       shareText: '새로운 길도 좋지만 끝까지 걸어보는 경험이 필요합니다.',
     },
     bear: {
       emoji: '🐻',
+      tone: '#8b6548',
       title: '곰형',
       subtitle: '쉽게 흔들리지 않는 따뜻한 버팀목',
       keywords: ['안정', '인내', '신뢰'],
@@ -434,11 +456,12 @@ const animal = {
       ],
       strengths: ['인내력', '안정감', '포용력'],
       cautions: ['변화가 필요해도 익숙한 상태에 머물 수 있음'],
-      match: '늑대, 백조',
+      match: { who: '늑대, 백조', why: '자기 몫을 아는 늑대와 결이 고운 백조는, 사람 좋아하는 나를 지치지 않게 합니다.' },
       shareText: '천천히 가는 것과 멈춰 있는 것은 다릅니다.',
     },
     dolphin: {
       emoji: '🐬',
+      tone: '#438eaa',
       title: '돌고래형',
       subtitle: '사람의 마음을 연결하는 밝은 에너지',
       keywords: ['공감', '소통', '낙관성'],
@@ -450,11 +473,12 @@ const animal = {
       ],
       strengths: ['공감력', '친화력', '표현력'],
       cautions: ['다른 사람의 감정까지 책임지려 할 수 있음'],
-      match: '늑대, 부엉이',
+      match: { who: '늑대, 부엉이', why: '말수가 적은 둘과는 설명이 짧아도 통합니다. 혼자만의 시간을 서로 지켜 줍니다.' },
       shareText: '다른 사람의 기분보다 내 마음을 먼저 확인해보세요.',
     },
     squirrel: {
       emoji: '🐿️',
+      tone: '#ad852e',
       title: '다람쥐형',
       subtitle: '작은 준비를 큰 성과로 만드는 설계자',
       keywords: ['계획', '성실', '성장'],
@@ -466,11 +490,12 @@ const animal = {
       ],
       strengths: ['준비성', '꼼꼼함', '지속력'],
       cautions: ['계획이 틀어지면 불안해질 수 있음'],
-      match: '부엉이, 곰',
+      match: { who: '부엉이, 곰', why: '차분한 둘이 속도를 잡아 주면, 앞만 보고 달리다 놓치던 것이 보입니다.' },
       shareText: '완벽히 준비되지 않아도 시작할 수 있습니다.',
     },
     lion: {
       emoji: '🦁',
+      tone: '#bd8125',
       title: '사자형',
       subtitle: '기회를 발견하면 앞으로 나서는 도전자',
       keywords: ['자신감', '용기', '추진력'],
@@ -482,11 +507,12 @@ const animal = {
       ],
       strengths: ['결단력', '행동력', '자신감'],
       cautions: ['충분히 생각하지 않고 속도를 낼 수 있음'],
-      match: '여우, 백조',
+      match: { who: '여우, 백조', why: '재빠른 여우와 단정한 백조 옆에서는, 조심스러운 성격이 흠이 되지 않습니다.' },
       shareText: '앞장서는 것만큼 주변의 속도를 살피는 것도 중요합니다.',
     },
     swan: {
       emoji: '🦢',
+      tone: '#9488bd',
       title: '백조형',
       subtitle: '잔잔한 겉모습 아래 깊은 감성을 품은 예술가',
       keywords: ['감수성', '섬세함', '진정성'],
@@ -498,13 +524,14 @@ const animal = {
       ],
       strengths: ['섬세함', '표현력', '공감 능력'],
       cautions: ['상처를 오래 간직할 수 있음'],
-      match: '곰, 사자',
+      match: { who: '곰, 사자', why: '든든한 둘이 뒤를 받쳐 주면, 마음 놓고 사람들 사이를 오갈 수 있습니다.' },
       shareText: '섬세함은 약함이 아니라 세상을 깊게 보는 능력입니다.',
     },
 
     /* ── 여기부터 원본 기획서에 없던 추가분 ── */
     dog: {
       emoji: '🐶',
+      tone: '#b28b62',
       title: '강아지형',
       subtitle: '마음을 숨기지 않아서 더 믿음이 가는 사람',
       keywords: ['다정함', '솔직함', '충실함'],
@@ -516,11 +543,12 @@ const animal = {
       ],
       strengths: ['친화력', '표현력', '의리'],
       cautions: ['상대의 반응에 기분이 크게 흔들릴 수 있음'],
-      match: '고양이, 돌고래',
+      match: { who: '고양이, 돌고래', why: '적당히 거리를 두는 고양이와 밝은 돌고래는, 곁을 내주는 내 성격과 잘 맞습니다.' },
       shareText: '먼저 다가가는 마음은 손해가 아니라 당신의 재능입니다.',
     },
     cat: {
       emoji: '🐱',
+      tone: '#5e6170',
       title: '고양이형',
       subtitle: '가까이 오되 내 속도는 내가 정하는 사람',
       keywords: ['자립', '관찰', '기준'],
@@ -532,11 +560,12 @@ const animal = {
       ],
       strengths: ['독립성', '판단력', '몰입력'],
       cautions: ['마음을 늦게 표현해 오해를 살 수 있음'],
-      match: '강아지, 부엉이',
+      match: { who: '강아지, 부엉이', why: '살갑게 다가오는 강아지와 조용한 부엉이. 내가 원할 때 다가오고 물러나 줍니다.' },
       shareText: '거리를 두는 것과 마음이 없는 것은 다릅니다.',
     },
     rabbit: {
       emoji: '🐰',
+      tone: '#bf7e91',
       title: '토끼형',
       subtitle: '먼저 알아차리기 때문에 먼저 준비하는 사람',
       keywords: ['예민함', '기민함', '배려'],
@@ -548,11 +577,12 @@ const animal = {
       ],
       strengths: ['위험 감지', '섬세한 배려', '빠른 반응'],
       cautions: ['일어나지 않은 일까지 걱정해 지칠 수 있음'],
-      match: '곰, 펭귄',
+      match: { who: '곰, 펭귄', why: '천천히 가는 둘과 함께라면, 서두르지 않아도 되는 하루가 됩니다.' },
       shareText: '모든 위험을 미리 막지 않아도 당신은 충분히 잘하고 있습니다.',
     },
     penguin: {
       emoji: '🐧',
+      tone: '#668596',
       title: '펭귄형',
       subtitle: '요란하지 않게 끝까지 같이 가는 사람',
       keywords: ['한결같음', '동료애', '지구력'],
@@ -564,8 +594,298 @@ const animal = {
       ],
       strengths: ['성실함', '협동심', '버티는 힘'],
       cautions: ['힘들다는 말을 너무 늦게 꺼냄'],
-      match: '토끼, 늑대',
+      match: { who: '토끼, 늑대', why: '섬세한 토끼와 단단한 늑대. 무리에 섞이는 법과 혼자 서는 법을 서로에게서 배웁니다.' },
       shareText: '묵묵함은 티가 안 날 뿐 가장 오래 남는 힘입니다.',
+    },
+  },
+}
+
+/* ================================================================
+   3) 애매한 연락을 받았을 때, 내 마음 급발진 지수
+   ------------------------------------------------------------------
+   원본: 자료/공감형_4지선다_심리테스트_5세트.md (1번)
+
+   앞의 두 테스트와 채점 방식이 다르다. 위쪽은 선택지 하나가 여러 결과에
+   점수를 나눠 주지만(대표 +3 · 보조 +1), 이 테스트는 A/B/C/D 가 결과 넷과
+   1:1 로 맞물려 있어 선택지 하나가 유형 하나에만 1점을 준다.
+
+   그래서 4문항 2:2 동점이 자주 난다. 고정 순서로 끊으면 늘 같은 쪽이
+   이겨 버리므로, 여기서는 tieBreak: 'lastPick' 을 켜서 마지막 문항에서
+   고른 유형을 앞세운다 (원본 기획의 규칙).
+   ================================================================ */
+const message = {
+  id: 'message',
+  emoji: '💬',
+  title: '애매한 연락에 내 마음 급발진 지수',
+  short: '연락 급발진 지수',
+  description:
+    '갑자기 온 “할 말 있어” 앞에서, 나는 확인하고 끝낼까 아니면 혼자 서사를 만들까?',
+  accent: '#8a6a12',
+  hasResultArt: true,
+  tieBreak: 'lastPick',
+
+  questions: [
+    {
+      id: 'q1',
+      text: '메시지를 보자마자 가장 먼저 하는 행동은?',
+      options: [
+        { text: '“무슨 일인데?”라고 바로 묻는다.', scores: { ask_now: 1 } },
+        { text: '최근 대화를 위로 올려 본다.', scores: { read_context: 1 } },
+        { text: '심장이 철렁하지만 일단 답장을 미룬다.', scores: { guard_heart: 1 } },
+        { text: '최악의 상황을 세 개쯤 상상한다.', scores: { imagine_worst: 1 } },
+      ],
+    },
+    {
+      id: 'q2',
+      text: '상대가 “나중에 말할게”라고 하면?',
+      options: [
+        { text: '그러라고 하고 내 할 일을 한다.', scores: { ask_now: 1 } },
+        { text: '대충 어떤 이야기인지 추리한다.', scores: { read_context: 1 } },
+        { text: '아무 일 아닌 척 다른 얘기를 꺼낸다.', scores: { guard_heart: 1 } },
+        { text: '오늘 잠은 글렀다고 생각한다.', scores: { imagine_worst: 1 } },
+      ],
+    },
+    {
+      id: 'q3',
+      text: '그날 저녁까지 연락이 없으면?',
+      options: [
+        { text: '한 번 더 편하게 물어본다.', scores: { ask_now: 1 } },
+        { text: '친구에게 상황을 설명해 본다.', scores: { read_context: 1 } },
+        { text: '휴대폰을 멀리 둔다.', scores: { guard_heart: 1 } },
+        { text: '내가 뭘 잘못했는지 목록을 만든다.', scores: { imagine_worst: 1 } },
+      ],
+    },
+    {
+      id: 'q4',
+      text: '실제로 별일 아니었다면?',
+      options: [
+        { text: '“다행이다” 하고 넘긴다.', scores: { ask_now: 1 } },
+        { text: '왜 그렇게 말했는지 궁금해한다.', scores: { read_context: 1 } },
+        { text: '괜히 긴장했다며 민망해한다.', scores: { guard_heart: 1 } },
+        { text: '안심한 뒤에야 배가 고파진다.', scores: { imagine_worst: 1 } },
+      ],
+    },
+  ],
+
+  tieBreaker: ['ask_now', 'read_context', 'guard_heart', 'imagine_worst'],
+
+  results: {
+    ask_now: {
+      emoji: '🙋',
+      title: '확인하고 끝내는 타입',
+      subtitle: '모르는 상태를 오래 두지 못하는 사람',
+      keywords: ['직진', '회복력', '깔끔한 마무리'],
+      description:
+        '모르는 상태를 오래 두지 않습니다. 물어보고 답을 얻으면 마음도 바로 정상 속도로 돌아옵니다. 혼자 추측을 키우는 대신 한 문장을 보내는 쪽을 택하기 때문에, 오해가 쌓이기 전에 정리되는 편입니다.',
+      facts: [
+        { label: '급발진 지수', value: '21%' },
+        { label: '확인까지', value: '3분' },
+      ],
+      strengths: ['솔직한 소통', '빠른 회복', '오해 차단'],
+      cautions: ['상대가 아직 말할 준비가 안 됐을 수 있음'],
+      match: {
+        who: '상상으로 먼저 다치는 타입',
+        why: '혼자 커지던 상상을 한 마디로 꺼 줍니다. 옆에 있는 것만으로 밤이 조용해집니다.',
+      },
+      shareText: '“무슨 일인데?” 한 마디로 하루를 지켜냅니다.',
+    },
+    read_context: {
+      emoji: '🔍',
+      title: '맥락까지 읽는 타입',
+      subtitle: '한 문장보다 최근 분위기를 먼저 보는 사람',
+      keywords: ['관찰', '해석', '기억력'],
+      description:
+        '한 문장보다 최근 분위기와 대화의 결을 함께 봅니다. 언제부터 답장이 짧아졌는지, 그날 무슨 일이 있었는지까지 떠올리기 때문에 단서가 많을수록 해석도 정교해집니다.',
+      facts: [
+        { label: '급발진 지수', value: '48%' },
+        { label: '거슬러 읽은 대화', value: '2주치' },
+      ],
+      strengths: ['상황 파악', '기억력', '눈치'],
+      cautions: ['단서가 많아질수록 결론이 늦어짐'],
+      match: {
+        who: '확인하고 끝내는 타입',
+        why: '추리가 길어질 때 “그냥 물어보자”라고 말해 주는 사람이라, 답이 빨리 나옵니다.',
+      },
+      shareText: '메시지 한 줄로 지난 2주를 복기하는 사람.',
+    },
+    guard_heart: {
+      emoji: '🛡️',
+      title: '마음부터 지키는 타입',
+      subtitle: '흔들릴 것 같으면 먼저 거리를 두는 사람',
+      keywords: ['신중함', '자기 보호', '침착'],
+      description:
+        '답을 기다리는 동안 내가 더 흔들리지 않도록 거리를 둡니다. 무심한 게 아니라 신중한 것입니다. 감정이 가장 클 때 말하지 않는 습관 덕분에, 나중에 후회할 말을 남기지 않습니다.',
+      facts: [
+        { label: '급발진 지수', value: '63%' },
+        { label: '휴대폰 엎어 둔 시간', value: '4시간' },
+      ],
+      strengths: ['감정 조절', '신중함', '뒷말 없음'],
+      cautions: ['괜찮은 척하다 혼자 오래 앓을 수 있음'],
+      match: {
+        who: '맥락까지 읽는 타입',
+        why: '말하지 않아도 상태를 알아채는 쪽이라, 굳이 설명하지 않아도 되는 게 편합니다.',
+      },
+      shareText: '답장은 안 했지만 하루 종일 생각은 했습니다.',
+    },
+    imagine_worst: {
+      emoji: '🎬',
+      title: '상상으로 먼저 다치는 타입',
+      subtitle: '결론이 나기 전에 이미 3부작을 다 본 사람',
+      keywords: ['상상력', '몰입', '예민한 감각'],
+      description:
+        '결론이 나오기 전까지 머릿속에서 이미 여러 편의 드라마가 재생됩니다. 감정이 풍부하고 상황을 생생하게 그리는 능력이 있지만, 확인 전의 생각은 잠시 보류해도 됩니다. 대체로 별일 아니었습니다.',
+      facts: [
+        { label: '급발진 지수', value: '94%' },
+        { label: '상상한 시나리오', value: '3편' },
+      ],
+      strengths: ['풍부한 상상력', '깊은 몰입', '섬세한 감정'],
+      cautions: ['일어나지 않은 일로 먼저 지침'],
+      match: {
+        who: '마음부터 지키는 타입',
+        why: '같이 흔들리지 않고 옆에 있어 주기 때문에, 상상이 더 커지지 않고 멈춥니다.',
+      },
+      shareText: '아직 아무 일도 안 일어났는데 결말은 봤습니다.',
+    },
+  },
+}
+
+/* ================================================================
+   4) 좋아하는 사람이 스토리를 올렸을 때
+   ------------------------------------------------------------------
+   원본: 자료/공감형_4지선다_심리테스트_5세트.md (5번)
+   채점은 위 message 와 같다 (A/B/C/D → 결과 1:1, 동점은 마지막 답으로).
+   ================================================================ */
+const story = {
+  id: 'story',
+  emoji: '📱',
+  title: '좋아하는 사람이 스토리를 올렸을 때',
+  short: '스토리 반응 테스트',
+  description: '3초짜리 스토리 한 장 앞에서 드러나는, 티 내고 싶은 마음과 숨기고 싶은 마음.',
+  accent: '#a12a86',
+  hasResultArt: true,
+  tieBreak: 'lastPick',
+
+  questions: [
+    {
+      id: 'q1',
+      text: '좋아하는 사람이 스토리를 올리면?',
+      options: [
+        { text: '답장할 핑계를 바로 찾는다.', scores: { dm_dash: 1 } },
+        { text: '장소·태그·같이 있는 사람부터 본다.', scores: { story_csi: 1 } },
+        { text: '봤지만 본 티는 절대 안 낸다.', scores: { no_react: 1 } },
+        { text: '몇 분 뒤에 다시 들어가 본다.', scores: { meaning_maker: 1 } },
+      ],
+    },
+    {
+      id: 'q2',
+      text: '평소와 다른 분위기의 사진이면?',
+      options: [
+        { text: '“오늘 분위기 뭐야?” 하고 답장한다.', scores: { dm_dash: 1 } },
+        { text: '갑자기 왜 이런 사진인지 맥락을 찾는다.', scores: { story_csi: 1 } },
+        { text: '반응하고 싶지만 하트만 누르고 나온다.', scores: { no_react: 1 } },
+        { text: '누군가에게 보여 주려고 올린 건지 생각한다.', scores: { meaning_maker: 1 } },
+      ],
+    },
+    {
+      id: 'q3',
+      text: '내 스토리를 올릴 때 나는?',
+      options: [
+        { text: '공유하고 싶으면 바로 올린다.', scores: { dm_dash: 1 } },
+        { text: '그 사람이 봤는지 은근히 확인한다.', scores: { story_csi: 1 } },
+        { text: '올렸다가 ‘너무 티 났나?’ 싶어 지운다.', scores: { no_react: 1 } },
+        { text: '그 사람이 접속할 만한 시간에 올린다.', scores: { meaning_maker: 1 } },
+      ],
+    },
+    {
+      id: 'q4',
+      text: '내 스토리를 유독 빨리 봤다면?',
+      options: [
+        { text: '그냥 스토리를 자주 보는 사람인가 보다 한다.', scores: { dm_dash: 1 } },
+        { text: '지난번보다 빨랐는지 기억을 더듬는다.', scores: { story_csi: 1 } },
+        { text: '신경 안 쓰는 척 앱을 닫는다.', scores: { no_react: 1 } },
+        { text: '괜히 오늘 스토리를 하나 더 올리고 싶어진다.', scores: { meaning_maker: 1 } },
+      ],
+    },
+  ],
+
+  tieBreaker: ['dm_dash', 'story_csi', 'no_react', 'meaning_maker'],
+
+  results: {
+    dm_dash: {
+      emoji: '💌',
+      title: 'DM 직진러',
+      subtitle: '답장창은 이미 열려 있는 사람',
+      keywords: ['적극성', '솔직함', '대화력'],
+      description:
+        '스토리 한 장을 보면 대화 주제 세 개가 떠오릅니다. 이미 답장창은 열려 있고, 문제는 너무 빨리 답한 티가 날까 봐 30초만 기다리는 것입니다. 마음을 숨기는 데 에너지를 쓰지 않아 관계가 빨리 진전됩니다.',
+      facts: [
+        { label: '답장까지', value: '30초' },
+        { label: '티 남 지수', value: '82%' },
+      ],
+      strengths: ['먼저 다가가기', '대화 소재', '솔직한 표현'],
+      cautions: ['상대의 속도보다 빠를 수 있음'],
+      match: {
+        who: '무반응 고수',
+        why: '먼저 말을 걸어 주는 사람이 없으면 시작되지 않는 쪽이라, 내 직진이 헛되지 않습니다.',
+      },
+      shareText: '스토리 한 장에서 대화 주제 세 개를 뽑아냅니다.',
+    },
+    story_csi: {
+      emoji: '🕵️',
+      title: '스토리 CSI',
+      subtitle: '3초짜리 영상을 8분 동안 보는 사람',
+      keywords: ['관찰력', '추리', '집요함'],
+      description:
+        '사진은 3초짜리인데 태그·배경 음악·테이블 위 컵까지 다 봅니다. “누구랑 갔지?”라는 질문은 이미 마음속에서 브리핑이 끝났습니다. 놓치는 정보가 없는 대신, 알아낸 것을 티 내지 않는 데에도 힘을 씁니다.',
+      facts: [
+        { label: '단서 수집력', value: '96%' },
+        { label: '3초 영상 분석', value: '8분' },
+      ],
+      strengths: ['세밀한 관찰', '기억력', '상황 파악'],
+      cautions: ['알아낸 걸 말할 수 없어 혼자 답답함'],
+      match: {
+        who: '의미 부여 장인',
+        why: '단서를 모으는 나와 이야기를 만드는 쪽이 만나면, 스토리 하나로 밤을 새울 수 있습니다.',
+      },
+      shareText: '태그·음악·테이블 위 컵까지 전부 봤습니다.',
+    },
+    no_react: {
+      emoji: '🕶️',
+      title: '무반응 고수',
+      subtitle: '조회 기록만 남기고 마음은 비행기 모드',
+      keywords: ['자제력', '체면', '속마음'],
+      description:
+        '조회 기록만 남기고 마음은 비행기 모드입니다. 하트 하나도 너무 큰 고백 같아서, 오늘도 조용히 보고 조용히 나옵니다. 감정을 드러내지 않는 능력은 뛰어나지만, 그 덕분에 상대는 아무것도 모릅니다.',
+      facts: [
+        { label: '티 남 지수', value: '11%' },
+        { label: '남긴 흔적', value: '조회 기록뿐' },
+      ],
+      strengths: ['감정 조절', '침착함', '흔적 관리'],
+      cautions: ['아무 티도 안 나서 마음이 전달되지 않음'],
+      match: {
+        who: 'DM 직진러',
+        why: '먼저 문을 두드려 주는 사람이라, 내가 용기를 다 끌어모으지 않아도 됩니다.',
+      },
+      shareText: '봤습니다. 근데 아무 일도 없었던 걸로 합니다.',
+    },
+    meaning_maker: {
+      emoji: '✨',
+      title: '의미 부여 장인',
+      subtitle: '평범한 스토리에 서사를 입히는 사람',
+      keywords: ['상상력', '감수성', '타이밍'],
+      description:
+        '조회자 목록에 그 이름이 뜬 순간, 평범한 스토리가 갑자기 서사를 갖습니다. 호감의 증거는 아니어도 오늘 스토리 하나 더 올릴 명분은 충분합니다. 작은 신호에서 이야기를 만들어내는 재능이 있습니다.',
+      facts: [
+        { label: '의미 부여 지수', value: '93%' },
+        { label: '오늘 올린 스토리', value: '4개' },
+      ],
+      strengths: ['상상력', '감정 표현', '분위기 연출'],
+      cautions: ['혼자 만든 서사에 혼자 흔들림'],
+      match: {
+        who: '스토리 CSI',
+        why: '내가 만든 이야기에 근거를 붙여 주기도, 조용히 정정해 주기도 하는 사람입니다.',
+      },
+      shareText: '조회자 목록에 그 이름이 뜬 순간 서사가 시작됩니다.',
     },
   },
 }
@@ -577,19 +897,39 @@ const animal = {
  * 맞춰 두었으므로 여기서 한 번에 짝지으면 된다. 결과를 새로 추가할 때
  * 그림만 같은 이름으로 넣으면 자동으로 붙고, 빠뜨리면 아래 경고가 뜬다.
  */
-for (const test of [animal, zombie]) {
+for (const test of [animal, zombie, message, story]) {
   for (const [id, result] of Object.entries(test.results)) {
     result.image = art[test.id]?.[id] ?? ''
-    if (!result.image) console.warn(`[tests] ${test.id}/${id}.jpg 그림을 찾지 못했습니다.`)
+    // 그림이 아직 없는 테스트도 있다 (화면은 이모지로 대신 보여 준다).
+    // 한 장이라도 갖춘 테스트에서만 빠진 것을 알린다 — 없는 폴더까지 경고하면
+    // 콘솔이 시끄러워져 정작 봐야 할 경고를 놓친다.
+    if (!result.image && test.hasResultArt) {
+      console.warn(`[tests] ${test.id}/${id}.jpg 그림을 찾지 못했습니다.`)
+    }
   }
 }
 
 /** 목록 카드의 표지 — 좀비는 한 장, 동물은 네 마리를 모아 붙인다 */
 zombie.cover = [art.zombie.cover]
 animal.cover = [art.animal.dog, art.animal.cat, art.animal.owl, art.animal.fox]
+message.cover = [art.message.cover]
+story.cover = [art.story.cover]
+
+/* 테스트마다 칩 그림을 붙인다 (파일 이름이 곧 테스트 id) */
+for (const test of [animal, zombie, message, story]) {
+  test.chip = chips[test.id] ?? ''
+}
+
+/*
+ * 카드 배경에 크게 얹는 표시.
+ * 아이콘만으로는 '무슨 앱 이야기인지'까지만 읽힌다. 그 앱에서 무엇을 다루는지를
+ * 배경에 한 번 더 얹어 준다 — 마음(하트), 주고받기(종이비행기).
+ */
+message.mark = 'heart'
+story.mark = 'send'
 
 /** 메뉴에 놓이는 순서 */
-export const tests = [animal, zombie]
+export const tests = [animal, zombie, message, story]
 
 export const findTest = (id) => tests.find((test) => test.id === id) ?? null
 
@@ -611,10 +951,26 @@ export const calculateResult = (test, picks) => {
     }
   })
 
-  // 동점이면 tieBreaker 에서 앞선 쪽이 이긴다.
-  // 무작위로 고르면 같은 답인데 결과가 달라져 테스트를 믿지 못하게 된다.
+  /*
+   * 동점이면 tieBreaker 에서 앞선 쪽이 이긴다.
+   * 무작위로 고르면 같은 답인데 결과가 달라져 테스트를 믿지 못하게 된다.
+   *
+   * tieBreak: 'lastPick' 인 테스트(4지선다형)는 마지막 문항에서 고른 유형을
+   * 그 앞에 끼워 넣는다. 4문항 2:2 동점이 흔한데 고정 순서로만 끊으면
+   * 늘 같은 결과가 이겨, 뒤쪽 문항을 아무렇게나 골라도 티가 나지 않는다.
+   */
+  const order = [...test.tieBreaker]
+
+  if (test.tieBreak === 'lastPick') {
+    const last = test.questions.length - 1
+    const lastPicked = test.questions[last]?.options[picks[last]]
+    // 이 유형들은 선택지 하나가 결과 하나에만 점수를 준다 — 키가 곧 유형이다
+    const lastType = lastPicked ? Object.keys(lastPicked.scores)[0] : ''
+    if (lastType) order.unshift(lastType)
+  }
+
   const rank = (id) => {
-    const at = test.tieBreaker.indexOf(id)
+    const at = order.indexOf(id)
     return at === -1 ? Number.MAX_SAFE_INTEGER : at
   }
 

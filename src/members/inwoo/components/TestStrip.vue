@@ -1,6 +1,7 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { tests } from '../data/personalityTests'
+import { useStripTick } from '../data/stripTick'
 import { link } from '../routes'
 
 /**
@@ -14,8 +15,6 @@ import { link } from '../routes'
  *   · 탭이 안 보이면 멈춘다 (보이지도 않는 화면을 계속 돌릴 이유가 없다)
  *   · 움직임을 줄여 달라고 설정한 사람에게는 아예 돌리지 않는다
  */
-const SLIDE_MS = 3000
-
 /** 테스트 하나에 한 장. 같은 테스트가 두 번 뜨면 넘어가는 의미가 없다 */
 const slides = computed(() =>
   tests.map((test) => ({
@@ -28,53 +27,32 @@ const slides = computed(() =>
 )
 
 const index = ref(0)
-const isPaused = ref(false)
+
+/*
+ * 넘기는 박자는 두 띠가 함께 쓴다 (data/stripTick.js).
+ * 각자 시계를 들면 조금씩 어긋난 시각에 넘어가 화면 아래가 계속 들썩인다.
+ */
+const { tick, hold, release } = useStripTick()
+
+watch(tick, () => {
+  index.value = (index.value + 1) % slides.value.length
+})
 
 const go = (next) => {
   const size = slides.value.length
   index.value = ((next % size) + size) % size
 }
 
-let timer = 0
-
-const stop = () => {
-  if (timer) window.clearInterval(timer)
-  timer = 0
-}
-
-const start = () => {
-  stop()
-  // 움직임을 줄여 달라는 설정이면 자동 전환을 걸지 않는다
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
-  timer = window.setInterval(() => {
-    if (!isPaused.value && document.visibilityState === 'visible') go(index.value + 1)
-  }, SLIDE_MS)
-}
-
-const onVisibility = () => {
-  if (document.visibilityState === 'visible') start()
-  else stop()
-}
-
-onMounted(() => {
-  start()
-  document.addEventListener('visibilitychange', onVisibility)
-})
-
-onBeforeUnmount(() => {
-  stop()
-  document.removeEventListener('visibilitychange', onVisibility)
-})
 </script>
 
 <template>
   <section
     class="strip"
     aria-label="심리 테스트"
-    @mouseenter="isPaused = true"
-    @mouseleave="isPaused = false"
-    @focusin="isPaused = true"
-    @focusout="isPaused = false"
+    @mouseenter="hold"
+    @mouseleave="release"
+    @focusin="hold"
+    @focusout="release"
   >
     <!-- 창 하나에 여러 장을 옆으로 이어 붙이고 통째로 민다 -->
     <div class="window">
@@ -91,7 +69,11 @@ onBeforeUnmount(() => {
             </span>
 
             <span class="body">
-              <span class="tag">{{ slide.test.emoji }} {{ slide.test.short }}</span>
+              <span class="tag">
+                <img v-if="slide.test.chip" :src="slide.test.chip" alt="" />
+                <span v-else aria-hidden="true">{{ slide.test.emoji }}</span>
+                {{ slide.test.short }}
+              </span>
               <b>{{ slide.title }}</b>
               <small>{{ slide.lead }}</small>
             </span>
@@ -146,8 +128,8 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 14px;
   align-items: center;
-  min-height: 96px;
-  padding: 14px 18px;
+  min-height: 88px;
+  padding: 11px 18px;
   background: linear-gradient(
     100deg,
     color-mix(in srgb, var(--tone) 88%, transparent),
@@ -165,7 +147,7 @@ onBeforeUnmount(() => {
 
 .art img {
   width: 62px;
-  height: 62px;
+  height: 60px;
   border: 2px solid #fff;
   border-radius: 50%;
   object-fit: cover;
@@ -182,9 +164,22 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 
+/* 그림과 글자를 같은 줄에 세운다 (밑선 정렬이면 그림만 처진다) */
+.tag img {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+
 .tag {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
   justify-self: start;
-  padding: 3px 9px;
+  padding: 3px 9px 3px 4px;
   border-radius: 999px;
   background: rgb(255 255 255 / 0.22);
   font-size: 10.5px;

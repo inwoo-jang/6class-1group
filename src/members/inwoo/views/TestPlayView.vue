@@ -1,14 +1,15 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
 // 아이콘은 Ant Design 의 Vue 판을 쓴다 (@ant-design/icons 는 React 전용)
-import { CopyFilled, RedoOutlined } from '@ant-design/icons-vue'
+import { PictureFilled, RedoOutlined } from '@ant-design/icons-vue'
 import BaseDashboardCard from '../components/BaseDashboardCard.vue'
 import { calculateResult, findTest, tests } from '../data/personalityTests'
 import { useAuthStore } from '../stores/authStore'
 import { useRecordStore } from '../stores/recordStore'
+import { downloadBlob, drawResultCard } from '../utils/resultCard'
 import { link } from '../routes'
 
 /**
@@ -18,7 +19,6 @@ import { link } from '../routes'
  * 대신 뒤로 가기(이전 문항)를 두어 잘못 고른 답을 고칠 수 있게 했다.
  */
 const route = useRoute()
-const router = useRouter()
 
 const test = computed(() => findTest(route.params.testId))
 
@@ -65,17 +65,52 @@ const restart = () => {
   step.value = 0
 }
 
-/** 결과 문구를 클립보드로 */
-const copyShare = async () => {
+/* ── 그림으로 저장 ─────────────────────────────────────────────
+ *
+ * 화면을 그대로 찍지 않고 공유용 카드를 새로 그린다.
+ * 버튼·메뉴가 같이 찍히지 않고, 어느 브라우저에서 눌러도 같은 그림이 나온다.
+ * 그리는 일은 utils/resultCard.js 가 맡는다.
+ */
+const isMakingImage = ref(false)
+
+const saveImage = async () => {
   const result = outcome.value?.result
-  if (!result) return
-  const text = `${result.emoji} ${result.title} — ${result.subtitle}\n"${result.shareText}"\n${test.value.title}`
+  if (!result || isMakingImage.value) return
+
+  isMakingImage.value = true
   try {
-    await navigator.clipboard.writeText(text)
-    ElMessage.success({ message: '결과를 복사했습니다.', duration: 1600 })
+    const blob = await drawResultCard({ test: test.value, result })
+    if (!blob) throw new Error('no blob')
+    downloadBlob(blob, `${result.title}_${test.value.short}.png`)
+    ElMessage.success({ message: '이미지로 저장했어요!', duration: 1600 })
   } catch {
-    ElMessage.warning('브라우저가 복사를 막았습니다. 길게 눌러 직접 복사해 주세요.')
+    ElMessage.error('그림을 만들지 못했어요. 잠시 뒤 다시 눌러 주세요.')
+  } finally {
+    isMakingImage.value = false
   }
+}
+
+/*
+ * 결과 그림 미리 받아 두기.
+ *
+ * 결과 화면에 닿고 나서야 그림을 받으면, 동그란 자리가 잠깐 하얗게 비어 있다.
+ * 문항을 푸는 동안 미리 받아 두면 결과와 그림이 같이 나타난다.
+ */
+const preload = () => {
+  if (!test.value) return
+  for (const result of Object.values(test.value.results)) {
+    if (result.image) new Image().src = result.image
+  }
+}
+
+onMounted(preload)
+watch(() => route.params.testId, preload)
+
+/** '86%' 처럼 퍼센트면 숫자만 꺼낸다. 아니면 null — 막대를 그리지 않는다 */
+const percentOf = (value) => {
+  const matched = String(value).match(/^(\d{1,3})\s*%$/)
+  if (!matched) return null
+  return Math.min(100, Number(matched[1]))
 }
 
 /** 이 테스트가 아닌 다른 테스트들 */
@@ -128,8 +163,23 @@ const saveResult = async () => {
   }
 
   savedRecordId.value = saved.id
-  ElMessage.success({ message: '기록에 저장했어요!', duration: 1800 })
+  ElMessage.success({ message: 'My 에 저장했어요!', duration: 1600 })
 }
+
+/*
+ * 로그인해 있으면 알아서 남긴다 (운세와 같은 규칙).
+ * 결과를 보고 나서 저장 버튼을 또 눌러야 하는 것은 군더더기다.
+ * 이미 저장했거나 저장 중이면 건너뛴다.
+ */
+watch(
+  [outcome, isLoggedIn],
+  ([result, loggedIn]) => {
+    if (!result?.result || !loggedIn) return
+    if (savedRecordId.value || isSaving.value) return
+    saveResult()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -138,11 +188,15 @@ const saveResult = async () => {
   </BaseDashboardCard>
 
   <BaseDashboardCard v-else>
-    <div class="play" :style="{ '--tone': test.accent }">
+    <div class="play" :style="{ '--tone': outcome?.result?.tone ?? test.accent }">
       <!-- ── 머리말 ── -->
       <header class="head">
         <div>
-          <p class="eyebrow">{{ test.emoji }} {{ test.short }}</p>
+          <p class="eyebrow">
+            <img v-if="test.chip" :src="test.chip" alt="" />
+            <span v-else aria-hidden="true">{{ test.emoji }}</span>
+            <span>{{ test.short }}</span>
+          </p>
           <h3>{{ test.title }}</h3>
         </div>
         <RouterLink class="quit" :to="link('tests')">목록</RouterLink>
@@ -177,14 +231,12 @@ const saveResult = async () => {
       <template v-else-if="outcome?.result">
         <!-- ① 히어로 — 그림과 이름만. 결과를 "받았다"는 느낌이 먼저다 -->
         <section class="hero" aria-live="polite">
-          <span class="pop pop-a" aria-hidden="true">✨</span>
-          <span class="pop pop-b" aria-hidden="true">🎉</span>
-
           <p class="hero-top">내 결과는</p>
 
           <figure v-if="outcome.result.image" class="portrait">
             <img :src="outcome.result.image" :alt="`${outcome.result.title} 그림`" />
-            <figcaption aria-hidden="true">{{ outcome.result.emoji }}</figcaption>
+            <span class="glitter glitter-a" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /></span>
+            <span class="glitter glitter-b" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /></span>
           </figure>
           <p v-else class="portrait-emoji" aria-hidden="true">{{ outcome.result.emoji }}</p>
 
@@ -195,10 +247,25 @@ const saveResult = async () => {
             <li v-for="word in outcome.result.keywords" :key="word">#{{ word }}</li>
           </ul>
 
+          <!--
+            숫자 하나가 흰 상자에 덩그러니 놓이면 무슨 뜻인지 와닿지 않는다.
+            퍼센트는 채워진 막대로, 그 외 값은 그대로 크게 적는다.
+          -->
           <ul v-if="outcome.result.facts" class="stats">
-            <li v-for="fact in outcome.result.facts" :key="fact.label">
-              <b>{{ fact.value }}</b>
-              <small>{{ fact.label }}</small>
+            <!-- 클래스 이름은 stat-* 로 묶는다. 아래 점수 막대가 이미 .gauge 를 쓰고 있어
+                 같은 이름을 붙이면 그 규칙(height: 7px)이 이 칸에 걸린다 -->
+            <li
+              v-for="fact in outcome.result.facts"
+              :key="fact.label"
+              :class="{ 'stat-wide': percentOf(fact.value) !== null }"
+            >
+              <span class="stat-top">
+                <small>{{ fact.label }}</small>
+                <b>{{ fact.value }}</b>
+              </span>
+              <span v-if="percentOf(fact.value) !== null" class="stat-bar" aria-hidden="true">
+                <i :style="{ width: `${percentOf(fact.value)}%` }" />
+              </span>
             </li>
           </ul>
         </section>
@@ -224,12 +291,13 @@ const saveResult = async () => {
           </section>
         </div>
 
-        <!-- ④ 궁합 -->
+        <!-- ④ 궁합 — 이름만 적으면 "그래서 뭐" 가 된다. 왜 맞는지까지 -->
         <section class="match">
           <span class="match-face" aria-hidden="true">💞</span>
-          <span>
+          <span class="match-body">
             <small>이런 사람이랑 잘 맞아요</small>
-            <b>{{ outcome.result.match }}</b>
+            <b>{{ outcome.result.match.who }}</b>
+            <em v-if="outcome.result.match.why">{{ outcome.result.match.why }}</em>
           </span>
         </section>
 
@@ -252,21 +320,14 @@ const saveResult = async () => {
 
         <!-- ⑦ 버튼 -->
         <div class="actions">
-          <button type="button" class="primary" @click="copyShare">
-            <CopyFilled aria-hidden="true" /> 결과 복사
+          <button type="button" class="primary" :disabled="isMakingImage" @click="saveImage">
+            <PictureFilled aria-hidden="true" />
+            {{ isMakingImage ? '만드는 중…' : '이미지로 저장' }}
           </button>
 
-          <button
-            v-if="isLoggedIn && !savedRecordId"
-            type="button"
-            class="save"
-            :disabled="isSaving"
-            @click="saveResult"
-          >
-            <span aria-hidden="true">💾</span> {{ isSaving ? '저장 중…' : '기록에 저장' }}
-          </button>
-          <RouterLink v-else-if="savedRecordId" class="saved" :to="link('records')">
-            저장 완료 · 내 기록 보기 →
+          <!-- 로그인해 있으면 알아서 저장된다. 저장된 뒤에는 보러 가는 길만 둔다 -->
+          <RouterLink v-if="savedRecordId" class="saved" :to="link('records')">
+            My 에서 보기 →
           </RouterLink>
           <RouterLink v-else class="saved ghost" :to="link('login')">
             로그인하고 저장하기
@@ -323,7 +384,20 @@ const saveResult = async () => {
   justify-content: space-between;
 }
 
+.eyebrow img {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+
+/* 그림·아이콘·글자를 한 줄에 가운데로 세운다 */
 .eyebrow {
+  display: flex;
+  gap: 5px;
+  align-items: center;
   margin: 0 0 4px;
   color: var(--tone);
   font-family: var(--font-mono);
@@ -400,7 +474,7 @@ h3 {
   padding: 14px 16px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--surface);
+  background: var(--panel-strong);
   color: var(--ink-soft);
   cursor: pointer;
   font: inherit;
@@ -459,25 +533,53 @@ h3 {
   padding: 26px 20px 22px;
   border-radius: 26px;
   background:
-    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--tone) 26%, transparent), transparent 70%),
-    linear-gradient(160deg, color-mix(in srgb, var(--tone) 14%, transparent), color-mix(in srgb, var(--tone) 4%, transparent));
-  overflow: hidden;
+    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--tone) 18%, transparent), transparent 70%),
+    linear-gradient(160deg, color-mix(in srgb, var(--tone) 9%, transparent), color-mix(in srgb, var(--tone) 3%, transparent));
+  /*
+   * clip 은 넘치는 것만 자르고 자리는 그대로 잡아 준다.
+   * hidden 으로 두면 이 상자가 스크롤 컨테이너가 되어, 안에 든 것이 길어졌을 때
+   * 늘어나지 않고 아래가 잘린다 (생존 확률 막대가 잘려 보이던 이유).
+   */
+  overflow: clip;
   text-align: center;
 }
 
-/* 모서리에 흩뿌린 작은 장식 — 결과가 "터진" 느낌을 준다 */
-.pop {
+/* 결과 그림을 감싸는 여백에서 계속 반짝이는 별빛. */
+.glitter {
   position: absolute;
-  font-size: 20px;
-  opacity: 0.6;
-  animation: float 3.2s ease-in-out infinite;
+  z-index: 2;
+  width: 64px;
+  height: 64px;
+  pointer-events: none;
 }
 
-.pop-a { top: 16px; left: 20px; }
-.pop-b { top: 28px; right: 22px; animation-delay: 0.8s; }
+.glitter i {
+  position: absolute;
+  display: block;
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, #fff, #fff6dc);
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+  filter: drop-shadow(0 0 5px rgb(255 255 255 / 0.95));
+  animation: star-twinkle 2.3s ease-in-out infinite alternate;
+}
 
-@keyframes float {
-  50% { transform: translateY(-6px) rotate(8deg); }
+.glitter i:nth-child(1) { top: 3px; left: 26px; width: 12px; height: 12px; }
+.glitter i:nth-child(2) { top: 25px; left: 3px; width: 7px; height: 7px; background: #fffdf6; animation-delay: 0.35s; }
+.glitter i:nth-child(3) { right: 4px; bottom: 8px; width: 9px; height: 9px; background: #f3edff; animation-delay: 0.7s; }
+.glitter i:nth-child(4) { bottom: 1px; left: 22px; width: 6px; height: 6px; background: #fff1d6; animation-delay: 1.05s; }
+.glitter i:nth-child(5) { top: 13px; right: 1px; width: 5px; height: 5px; background: #e7f6ff; animation-delay: 1.4s; }
+.glitter i:nth-child(6) { top: 42px; left: 12px; width: 5px; height: 5px; background: #fff; animation-delay: 1.75s; }
+.glitter i:nth-child(7) { top: 18px; left: 14px; width: 4px; height: 4px; background: #f7efff; animation-delay: 0.2s; }
+.glitter i:nth-child(8) { right: 16px; bottom: 20px; width: 6px; height: 6px; background: #fff9e8; animation-delay: 1.15s; }
+.glitter i:nth-child(9) { right: 17px; bottom: 2px; width: 4px; height: 4px; background: #eef9ff; animation-delay: 1.9s; }
+
+.portrait .glitter-a { top: -25px; left: -32px; }
+.portrait .glitter-b { right: -32px; bottom: -25px; transform: scale(0.9) rotate(24deg); }
+
+@keyframes star-twinkle {
+  from { opacity: 0.22; transform: scale(0.55) rotate(0); }
+  to { opacity: 1; transform: scale(1.2) rotate(35deg); }
 }
 
 .hero-top {
@@ -493,32 +595,18 @@ h3 {
   width: 176px;
   height: 176px;
   margin: 2px 0 4px;
-  border: 4px solid #fff;
   border-radius: 50%;
-  overflow: hidden;
-  box-shadow: 0 12px 30px color-mix(in srgb, var(--tone) 40%, transparent);
+  overflow: visible;
 }
 
 .portrait img {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-}
-
-.portrait figcaption {
-  position: absolute;
-  right: 6px;
-  bottom: 6px;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border: 3px solid #fff;
+  border: 4px solid #fff;
   border-radius: 50%;
-  background: var(--tone);
-  font-size: 20px;
-  line-height: 1;
+  object-fit: cover;
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--tone) 32%, transparent);
 }
 
 .portrait-emoji {
@@ -570,6 +658,7 @@ h4 {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
+  width: 100%;
   margin: 8px 0 0;
   padding: 0;
   list-style: none;
@@ -577,11 +666,38 @@ h4 {
 
 .stats li {
   display: grid;
-  gap: 1px;
+  gap: 6px;
   min-width: 96px;
-  padding: 9px 16px;
+  padding: 10px 16px;
   border-radius: 16px;
-  background: #fff;
+  background: rgb(255 255 255 / 0.9);
+}
+
+.stats li.stat-wide {
+  min-width: 240px;
+}
+
+.stat-top {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.stat-bar {
+  display: block;
+  overflow: hidden;
+  height: 7px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--tone) 16%, transparent);
+}
+
+.stat-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--tone);
+  transition: width 0.8s cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 
 .stats b {
@@ -682,9 +798,16 @@ h4 {
 
 .match-face { font-size: 22px; }
 
-.match span {
+.match-body {
   display: grid;
-  gap: 2px;
+  gap: 3px;
+}
+
+.match em {
+  color: var(--muted);
+  font-size: 12.5px;
+  font-style: normal;
+  line-height: 1.6;
 }
 
 .match small {
@@ -726,7 +849,7 @@ blockquote::before {
   padding: 12px 16px;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: var(--surface);
+  background: var(--panel-strong);
 }
 
 .scores summary {
@@ -886,6 +1009,7 @@ blockquote::before {
 .others a:hover { background: var(--accent-tint); color: var(--accent); }
 
 @media (prefers-reduced-motion: reduce) {
-  .pop { animation: none; }
+  .glitter,
+  .glitter i { animation: none; }
 }
 </style>

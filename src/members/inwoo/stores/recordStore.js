@@ -1,11 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import {
-  createRecord,
-  fetchRecords,
-  removeRecord,
-  updateMemo,
-} from '../data/fortuneApi'
+import { createRecord, fetchRecords, removeRecord } from '../data/fortuneApi'
 
 
 /**
@@ -27,6 +22,7 @@ import {
 export const RECORD_KINDS = [
   { key: 'tarot', label: '운세', emoji: '🔮' },
   { key: 'test', label: '테스트', emoji: '🧪' },
+  { key: 'game', label: '게임', emoji: '🎲' },
 ]
 
 export const useRecordStore = defineStore('fortuneRecord', () => {
@@ -111,22 +107,6 @@ export const useRecordStore = defineStore('fortuneRecord', () => {
     }
   }
 
-  /** 메모만 고친다 */
-  const editMemo = async (id, memo) => {
-    errorMessage.value = ''
-    try {
-      const updated = await updateMemo(id, memo)
-      const replace = (list) =>
-        list.map((record) => (record.id === updated.id ? updated : record))
-      records.value = replace(records.value)
-      allRecords.value = replace(allRecords.value)
-      return true
-    } catch (error) {
-      errorMessage.value = error.message
-      return false
-    }
-  }
-
   /** 지우기 */
   const remove = async (id) => {
     errorMessage.value = ''
@@ -162,7 +142,6 @@ export const useRecordStore = defineStore('fortuneRecord', () => {
     load,
     setFilter,
     add,
-    editMemo,
     remove,
     clear,
   }
