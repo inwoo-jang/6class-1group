@@ -1,0 +1,1 @@
+import{l as e,ut as t}from"./runtime-core.esm-bundler-36cGDk4R.js";import{n}from"./pinia-CZkmeFT3.js";var r=n(`config`,()=>{let n=t(`celsius`),r=e(()=>n.value===`celsius`?`℃`:`℉`);function i(){n.value=n.value===`celsius`?`fahrenheit`:`celsius`}return{unit:n,unitSymbol:r,toggleUnit:i}});export{r as t};
