@@ -147,9 +147,8 @@ const fetchJson = async (url, params, headers) => {
   }
 }
 
-/** 좌표 하나의 현재 날씨를 met.no 에서 받아 Open-Meteo 의 current 모양으로 옮긴다 */
-const currentFromMetNo = async (lat, lon, fields) => {
-  const data = await fetchJson(
+const askMetNo = (lat, lon) =>
+  fetchJson(
     METNO_URL,
     { lat: Number(lat).toFixed(4), lon: Number(lon).toFixed(4) },
     /*
@@ -160,52 +159,155 @@ const currentFromMetNo = async (lat, lon, fields) => {
     { 'User-Agent': 'skala-6class-1group (https://github.com/inwoo-jang/6class-1group)' },
   )
 
-  const slot = data?.properties?.timeseries?.[0]
-  const now = slot?.data?.instant?.details ?? {}
-  const symbol =
-    slot?.data?.next_1_hours?.summary?.symbol_code ??
-    slot?.data?.next_6_hours?.summary?.symbol_code
+/** 그 시각의 날씨 이름 — 한 시간 앞이 없으면 여섯 시간 앞을 본다 */
+const symbolOf = (slot) =>
+  slot?.data?.next_1_hours?.summary?.symbol_code ?? slot?.data?.next_6_hours?.summary?.symbol_code
 
+/** 시간 하나를 Open-Meteo 가 쓰는 이름으로 옮긴다. 없는 값은 null 로 둔다 */
+const readSlot = (slot, windToKmh) => {
+  const now = slot?.data?.instant?.details ?? {}
+  const symbol = symbolOf(slot)
   const code = wmoFromSymbol(symbol)
   const temperature = now.air_temperature ?? null
+  const rain = slot?.data?.next_1_hours?.details?.precipitation_amount ?? null
+  const isSnow = code !== null && code >= 71 && code <= 86
 
   /*
-   * met.no 는 체감온도를 주지 않는다. 지어내지 않고 기온을 그대로 둔다 —
-   * 없는 값을 그럴듯하게 만들면, 틀렸을 때 아무도 알아채지 못한다.
-   * 풍속은 이미 m/s 인데 Open-Meteo 는 km/h 로 주므로 맞춰서 올린다.
+   * met.no 가 주지 않는 것은 지어내지 않는다.
+   * 체감온도는 기온을 그대로 두고, 강수확률 · 가시거리는 비워 둔다.
+   * 없는 값을 그럴듯하게 만들면 틀렸을 때 아무도 알아채지 못한다.
+   *
+   * 낮인지 밤인지는 짐작하지 않는다 — 날씨 이름 뒤에 붙어 오는 것을 읽는다
+   * ('partlycloudy_night').
    */
-  const all = {
-    time: slot?.time ?? new Date().toISOString(),
-    interval: 900,
+  return {
     temperature_2m: temperature,
     apparent_temperature: temperature,
     relative_humidity_2m: now.relative_humidity ?? null,
-    wind_speed_10m: now.wind_speed != null ? Math.round(now.wind_speed * 3.6 * 10) / 10 : null,
+    surface_pressure: now.air_pressure_at_sea_level ?? null,
+    pressure_msl: now.air_pressure_at_sea_level ?? null,
+    // Open-Meteo 는 km/h 가 기본이고, wind_speed_unit=ms 로 물으면 m/s 로 준다
+    wind_speed_10m:
+      now.wind_speed == null ? null : windToKmh ? Math.round(now.wind_speed * 3.6 * 10) / 10 : now.wind_speed,
     weather_code: code,
     weathercode: code,
-    is_day: 1,
+    is_day: String(symbol ?? '').endsWith('_night') ? 0 : 1,
+    precipitation_probability: null,
+    visibility: null,
+    rain: isSnow ? 0 : rain,
+    snowfall: isSnow ? rain : 0,
+  }
+}
+
+/** 물어본 항목만 돌려준다 — Open-Meteo 도 그렇게 한다 */
+const pick = (source, fields) =>
+  Object.fromEntries(fields.filter((field) => field in source).map((field) => [field, source[field]]))
+
+/** '2026-08-05T04:00:00Z' → 그 지역의 'YYYY-MM-DD' */
+const localDateOf = (isoTime, offsetSeconds) =>
+  new Date(Date.parse(isoTime) + offsetSeconds * 1000).toISOString().slice(0, 10)
+
+/**
+ * 한 좌표의 met.no 응답을 Open-Meteo 의 대답 한 덩이로 옮긴다.
+ * 물어본 것(current · hourly · daily)만 만들어 준다.
+ */
+const answerFromMetNo = async (lat, lon, want, offsetSeconds, windToKmh, unixTime) => {
+  const data = await askMetNo(lat, lon)
+  const slots = data?.properties?.timeseries ?? []
+  if (!slots.length) throw new Error('met.no 가 시간표를 주지 않았습니다.')
+
+  const stamp = (isoTime) => (unixTime ? Math.round(Date.parse(isoTime) / 1000) : isoTime)
+  const answer = { latitude: Number(lat), longitude: Number(lon), utc_offset_seconds: offsetSeconds }
+
+  if (want.current) {
+    answer.current = {
+      time: stamp(slots[0].time),
+      interval: 900,
+      ...pick(readSlot(slots[0], windToKmh), want.current),
+    }
   }
 
-  // 물어본 항목만 돌려준다 — Open-Meteo 도 그렇게 한다
-  const current = { time: all.time, interval: all.interval }
-  for (const field of fields) {
-    if (field in all) current[field] = all[field]
+  if (want.hourly) {
+    // 하루치면 충분하다 — 그 뒤로 met.no 는 한 시간 간격이 아니라 여섯 시간 간격이 된다
+    const day = slots.slice(0, 24)
+    answer.hourly = { time: day.map((slot) => stamp(slot.time)) }
+    for (const field of want.hourly) {
+      answer.hourly[field] = day.map((slot) => readSlot(slot, windToKmh)[field] ?? null)
+    }
   }
-  return current
+
+  if (want.daily) {
+    // 같은 날짜끼리 묶는다. 하루의 최고·최저는 그 안의 값들에서 나온다
+    const byDate = new Map()
+    for (const slot of slots) {
+      const date = localDateOf(slot.time, offsetSeconds)
+      if (!byDate.has(date)) byDate.set(date, [])
+      byDate.get(date).push(slot)
+    }
+
+    const days = [...byDate.entries()].slice(0, 7)
+    const temperaturesOf = (group) =>
+      group
+        .map((slot) => slot?.data?.instant?.details?.air_temperature)
+        .filter((value) => Number.isFinite(value))
+
+    /** 그 날을 대표하는 날씨 — 현지 정오에 가장 가까운 시각의 것 */
+    const noonSlot = (group) =>
+      group.reduce((closest, slot) => {
+        const hour = (Date.parse(slot.time) + offsetSeconds * 1000) / 3_600_000
+        const closestHour = (Date.parse(closest.time) + offsetSeconds * 1000) / 3_600_000
+        return Math.abs((hour % 24) - 12) < Math.abs((closestHour % 24) - 12) ? slot : closest
+      })
+
+    answer.daily = { time: days.map(([date]) => (unixTime ? Date.parse(`${date}T00:00:00Z`) / 1000 - offsetSeconds : date)) }
+
+    for (const field of want.daily) {
+      answer.daily[field] = days.map(([, group]) => {
+        const temperatures = temperaturesOf(group)
+        if (field === 'temperature_2m_max') return temperatures.length ? Math.max(...temperatures) : null
+        if (field === 'temperature_2m_min') return temperatures.length ? Math.min(...temperatures) : null
+        if (field === 'weather_code' || field === 'weathercode') return wmoFromSymbol(symbolOf(noonSlot(group)))
+        // 강수확률 · 일출 · 일몰은 met.no 의 이 응답에 없다. 지어내지 않는다
+        return null
+      })
+    }
+  }
+
+  return answer
 }
 
 /**
  * Open-Meteo 가 막혔을 때 met.no 로 같은 대답을 만든다.
- * current 만 만들 수 있다 — hourly · daily 까지 흉내 내지는 않는다.
  */
 const forecastFromMetNo = async (params) => {
-  if (!params.current || params.hourly || params.daily) {
+  const asList = (value) =>
+    value ? String(value).split(',').map((field) => field.trim()) : null
+
+  const want = {
+    current: asList(params.current),
+    hourly: asList(params.hourly),
+    daily: asList(params.daily),
+  }
+
+  if (!want.current && !want.hourly && !want.daily) {
     throw new Error('met.no 로는 이 질문에 답할 수 없습니다.')
   }
 
   const lats = String(params.latitude).split(',')
   const lons = String(params.longitude).split(',')
-  const fields = String(params.current).split(',').map((field) => field.trim())
+
+  // Open-Meteo 는 풍속을 km/h 로 준다. ms 로 물었다면 met.no 값을 그대로 쓴다
+  const windToKmh = params.wind_speed_unit !== 'ms'
+  const unixTime = params.timeformat === 'unixtime'
+
+  /*
+   * 시간대.
+   * met.no 는 시각을 UTC 로만 주고 그 지역이 몇 시인지는 알려 주지 않는다.
+   * 지어낼 방법이 없어 보는 사람의 시간대를 쓴다 — 현재 위치와 국내 도시는
+   * 이것이 정확하고, 먼 나라 도시는 하루를 가르는 선이 어긋날 수 있다.
+   * Open-Meteo 가 돌아오면 제 값으로 바로잡힌다.
+   */
+  const offsetSeconds = -new Date().getTimezoneOffset() * 60
 
   /*
    * Open-Meteo 는 좌표 스무 개를 한 번에 받지만 met.no 는 한 번에 하나씩이다.
@@ -224,18 +326,21 @@ const forecastFromMetNo = async (params) => {
     while (cursor < lats.length) {
       const index = cursor++
       try {
-        answers[index] = {
-          latitude: Number(lats[index]),
-          longitude: Number(lons[index]),
-          current: await currentFromMetNo(lats[index], lons[index], fields),
-        }
+        answers[index] = await answerFromMetNo(
+          lats[index],
+          lons[index],
+          want,
+          offsetSeconds,
+          windToKmh,
+          unixTime,
+        )
         answered += 1
       } catch {
         // 이 좌표만 빈손으로 둔다. 화면은 값이 없는 칸을 이미 다룰 줄 안다.
         answers[index] = {
           latitude: Number(lats[index]),
           longitude: Number(lons[index]),
-          current: { time: new Date().toISOString(), interval: 900 },
+          utc_offset_seconds: offsetSeconds,
         }
       }
     }
