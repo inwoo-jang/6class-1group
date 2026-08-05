@@ -275,9 +275,9 @@ const logout = () => {
   position: relative;
   display: grid;
   overflow: hidden;
-  min-height: 100dvh;
-  padding: 12px;
-  border-radius: 16px;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
   background: var(--paper);
 }
 
@@ -306,6 +306,7 @@ const logout = () => {
   width: 100%;
   max-width: 660px;
   margin: 0 auto;
+  padding: 12px;
 }
 
 .nav {
