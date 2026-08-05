@@ -1,0 +1,1 @@
+import{n as e}from"./pinia-CZkmeFT3.js";var t=e(`gayeon-config`,{state:()=>({unit:`celsius`}),getters:{unitSymbol:e=>e.unit===`celsius`?`°C`:`°F`},actions:{toggleUnit(){this.unit=this.unit===`celsius`?`fahrenheit`:`celsius`}}});export{t};
