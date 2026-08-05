@@ -192,7 +192,11 @@ watch(
       <!-- ── 머리말 ── -->
       <header class="head">
         <div>
-          <p class="eyebrow">{{ test.emoji }} {{ test.short }}</p>
+          <p class="eyebrow">
+            <img v-if="test.chip" :src="test.chip" alt="" />
+            <span v-else aria-hidden="true">{{ test.emoji }}</span>
+            {{ test.short }}
+          </p>
           <h3>{{ test.title }}</h3>
         </div>
         <RouterLink class="quit" :to="link('tests')">목록</RouterLink>
@@ -380,6 +384,14 @@ watch(
   gap: 12px;
   align-items: flex-start;
   justify-content: space-between;
+}
+
+.eyebrow img {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: -3px;
 }
 
 .eyebrow {

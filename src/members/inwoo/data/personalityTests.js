@@ -25,12 +25,28 @@ const collect = (files) =>
     Object.entries(files).map(([path, url]) => [path.split('/').pop().replace('.jpg', ''), url]),
   )
 
+/**
+ * 칩에 붙는 작은 얼굴.
+ *
+ * 이모지는 기기마다 그림이 달라 목록에 넷을 늘어놓으면 결이 어긋난다.
+ * 각 테스트의 사진·아이콘에서 얼굴만 동그랗게 잘라 두고 그걸 쓴다.
+ */
+const chips = collect(
+  import.meta.glob('../assets/tests/chips/*.jpg', { eager: true, import: 'default' }),
+)
+
 const art = {
   animal: collect(
     import.meta.glob('../assets/tests/animal/*.jpg', { eager: true, import: 'default' }),
   ),
   zombie: collect(
     import.meta.glob('../assets/tests/zombie/*.jpg', { eager: true, import: 'default' }),
+  ),
+  message: collect(
+    import.meta.glob('../assets/tests/message/*.jpg', { eager: true, import: 'default' }),
+  ),
+  story: collect(
+    import.meta.glob('../assets/tests/story/*.jpg', { eager: true, import: 'default' }),
   ),
 }
 
@@ -44,6 +60,7 @@ const zombie = {
   short: '좀비 사태 생존 역할',
   description: '위기 상황에서 드러나는 생존 본능을 확인합니다. 단, 살아남는다는 보장은 없습니다.',
   accent: '#7d3b3b',
+  hasResultArt: true,
 
   questions: [
     {
@@ -253,6 +270,7 @@ const animal = {
   description:
     '관계, 선택, 스트레스와 도전에 반응하는 방식을 통해 나와 가장 닮은 동물을 찾습니다.',
   accent: '#2f5d50',
+  hasResultArt: true,
 
   questions: [
     {
@@ -570,6 +588,294 @@ const animal = {
   },
 }
 
+/* ================================================================
+   3) 애매한 연락을 받았을 때, 내 마음 급발진 지수
+   ------------------------------------------------------------------
+   원본: 자료/공감형_4지선다_심리테스트_5세트.md (1번)
+
+   앞의 두 테스트와 채점 방식이 다르다. 위쪽은 선택지 하나가 여러 결과에
+   점수를 나눠 주지만(대표 +3 · 보조 +1), 이 테스트는 A/B/C/D 가 결과 넷과
+   1:1 로 맞물려 있어 선택지 하나가 유형 하나에만 1점을 준다.
+
+   그래서 4문항 2:2 동점이 자주 난다. 고정 순서로 끊으면 늘 같은 쪽이
+   이겨 버리므로, 여기서는 tieBreak: 'lastPick' 을 켜서 마지막 문항에서
+   고른 유형을 앞세운다 (원본 기획의 규칙).
+   ================================================================ */
+const message = {
+  id: 'message',
+  emoji: '💬',
+  title: '애매한 연락을 받았을 때, 내 마음 급발진 지수',
+  short: '연락 급발진 지수',
+  description:
+    '갑자기 온 “할 말 있어” 앞에서, 나는 확인하고 끝낼까 아니면 혼자 서사를 만들까?',
+  accent: '#8a6a12',
+  tieBreak: 'lastPick',
+
+  questions: [
+    {
+      id: 'q1',
+      text: '메시지를 보자마자 가장 먼저 하는 행동은?',
+      options: [
+        { text: '“무슨 일인데?”라고 바로 묻는다.', scores: { ask_now: 1 } },
+        { text: '최근 대화를 위로 올려 본다.', scores: { read_context: 1 } },
+        { text: '심장이 철렁하지만 일단 답장을 미룬다.', scores: { guard_heart: 1 } },
+        { text: '최악의 상황을 세 개쯤 상상한다.', scores: { imagine_worst: 1 } },
+      ],
+    },
+    {
+      id: 'q2',
+      text: '상대가 “나중에 말할게”라고 하면?',
+      options: [
+        { text: '그러라고 하고 내 할 일을 한다.', scores: { ask_now: 1 } },
+        { text: '대충 어떤 이야기인지 추리한다.', scores: { read_context: 1 } },
+        { text: '아무 일 아닌 척 다른 얘기를 꺼낸다.', scores: { guard_heart: 1 } },
+        { text: '오늘 잠은 글렀다고 생각한다.', scores: { imagine_worst: 1 } },
+      ],
+    },
+    {
+      id: 'q3',
+      text: '그날 저녁까지 연락이 없으면?',
+      options: [
+        { text: '한 번 더 편하게 물어본다.', scores: { ask_now: 1 } },
+        { text: '친구에게 상황을 설명해 본다.', scores: { read_context: 1 } },
+        { text: '휴대폰을 멀리 둔다.', scores: { guard_heart: 1 } },
+        { text: '내가 뭘 잘못했는지 목록을 만든다.', scores: { imagine_worst: 1 } },
+      ],
+    },
+    {
+      id: 'q4',
+      text: '실제로 별일 아니었다면?',
+      options: [
+        { text: '“다행이다” 하고 넘긴다.', scores: { ask_now: 1 } },
+        { text: '왜 그렇게 말했는지 궁금해한다.', scores: { read_context: 1 } },
+        { text: '괜히 긴장했다며 민망해한다.', scores: { guard_heart: 1 } },
+        { text: '안심한 뒤에야 배가 고파진다.', scores: { imagine_worst: 1 } },
+      ],
+    },
+  ],
+
+  tieBreaker: ['ask_now', 'read_context', 'guard_heart', 'imagine_worst'],
+
+  results: {
+    ask_now: {
+      emoji: '🙋',
+      title: '확인하고 끝내는 타입',
+      subtitle: '모르는 상태를 오래 두지 못하는 사람',
+      keywords: ['직진', '회복력', '깔끔한 마무리'],
+      description:
+        '모르는 상태를 오래 두지 않습니다. 물어보고 답을 얻으면 마음도 바로 정상 속도로 돌아옵니다. 혼자 추측을 키우는 대신 한 문장을 보내는 쪽을 택하기 때문에, 오해가 쌓이기 전에 정리되는 편입니다.',
+      facts: [
+        { label: '급발진 지수', value: '21%' },
+        { label: '확인까지', value: '3분' },
+      ],
+      strengths: ['솔직한 소통', '빠른 회복', '오해 차단'],
+      cautions: ['상대가 아직 말할 준비가 안 됐을 수 있음'],
+      match: {
+        who: '상상으로 먼저 다치는 타입',
+        why: '혼자 커지던 상상을 한 마디로 꺼 줍니다. 옆에 있는 것만으로 밤이 조용해집니다.',
+      },
+      shareText: '“무슨 일인데?” 한 마디로 하루를 지켜냅니다.',
+    },
+    read_context: {
+      emoji: '🔍',
+      title: '맥락까지 읽는 타입',
+      subtitle: '한 문장보다 최근 분위기를 먼저 보는 사람',
+      keywords: ['관찰', '해석', '기억력'],
+      description:
+        '한 문장보다 최근 분위기와 대화의 결을 함께 봅니다. 언제부터 답장이 짧아졌는지, 그날 무슨 일이 있었는지까지 떠올리기 때문에 단서가 많을수록 해석도 정교해집니다.',
+      facts: [
+        { label: '급발진 지수', value: '48%' },
+        { label: '거슬러 읽은 대화', value: '2주치' },
+      ],
+      strengths: ['상황 파악', '기억력', '눈치'],
+      cautions: ['단서가 많아질수록 결론이 늦어짐'],
+      match: {
+        who: '확인하고 끝내는 타입',
+        why: '추리가 길어질 때 “그냥 물어보자”라고 말해 주는 사람이라, 답이 빨리 나옵니다.',
+      },
+      shareText: '메시지 한 줄로 지난 2주를 복기하는 사람.',
+    },
+    guard_heart: {
+      emoji: '🛡️',
+      title: '마음부터 지키는 타입',
+      subtitle: '흔들릴 것 같으면 먼저 거리를 두는 사람',
+      keywords: ['신중함', '자기 보호', '침착'],
+      description:
+        '답을 기다리는 동안 내가 더 흔들리지 않도록 거리를 둡니다. 무심한 게 아니라 신중한 것입니다. 감정이 가장 클 때 말하지 않는 습관 덕분에, 나중에 후회할 말을 남기지 않습니다.',
+      facts: [
+        { label: '급발진 지수', value: '63%' },
+        { label: '휴대폰 엎어 둔 시간', value: '4시간' },
+      ],
+      strengths: ['감정 조절', '신중함', '뒷말 없음'],
+      cautions: ['괜찮은 척하다 혼자 오래 앓을 수 있음'],
+      match: {
+        who: '맥락까지 읽는 타입',
+        why: '말하지 않아도 상태를 알아채는 쪽이라, 굳이 설명하지 않아도 되는 게 편합니다.',
+      },
+      shareText: '답장은 안 했지만 하루 종일 생각은 했습니다.',
+    },
+    imagine_worst: {
+      emoji: '🎬',
+      title: '상상으로 먼저 다치는 타입',
+      subtitle: '결론이 나기 전에 이미 3부작을 다 본 사람',
+      keywords: ['상상력', '몰입', '예민한 감각'],
+      description:
+        '결론이 나오기 전까지 머릿속에서 이미 여러 편의 드라마가 재생됩니다. 감정이 풍부하고 상황을 생생하게 그리는 능력이 있지만, 확인 전의 생각은 잠시 보류해도 됩니다. 대체로 별일 아니었습니다.',
+      facts: [
+        { label: '급발진 지수', value: '94%' },
+        { label: '상상한 시나리오', value: '3편' },
+      ],
+      strengths: ['풍부한 상상력', '깊은 몰입', '섬세한 감정'],
+      cautions: ['일어나지 않은 일로 먼저 지침'],
+      match: {
+        who: '마음부터 지키는 타입',
+        why: '같이 흔들리지 않고 옆에 있어 주기 때문에, 상상이 더 커지지 않고 멈춥니다.',
+      },
+      shareText: '아직 아무 일도 안 일어났는데 결말은 봤습니다.',
+    },
+  },
+}
+
+/* ================================================================
+   4) 좋아하는 사람이 스토리를 올렸을 때
+   ------------------------------------------------------------------
+   원본: 자료/공감형_4지선다_심리테스트_5세트.md (5번)
+   채점은 위 message 와 같다 (A/B/C/D → 결과 1:1, 동점은 마지막 답으로).
+   ================================================================ */
+const story = {
+  id: 'story',
+  emoji: '📱',
+  title: '좋아하는 사람이 스토리를 올렸을 때',
+  short: '스토리 반응 테스트',
+  description: '3초짜리 스토리 한 장 앞에서 드러나는, 티 내고 싶은 마음과 숨기고 싶은 마음.',
+  accent: '#a12a86',
+  tieBreak: 'lastPick',
+
+  questions: [
+    {
+      id: 'q1',
+      text: '좋아하는 사람이 스토리를 올리면?',
+      options: [
+        { text: '답장할 핑계를 바로 찾는다.', scores: { dm_dash: 1 } },
+        { text: '장소·태그·같이 있는 사람부터 본다.', scores: { story_csi: 1 } },
+        { text: '봤지만 본 티는 절대 안 낸다.', scores: { no_react: 1 } },
+        { text: '몇 분 뒤에 다시 들어가 본다.', scores: { meaning_maker: 1 } },
+      ],
+    },
+    {
+      id: 'q2',
+      text: '평소와 다른 분위기의 사진이면?',
+      options: [
+        { text: '“오늘 분위기 뭐야?” 하고 답장한다.', scores: { dm_dash: 1 } },
+        { text: '갑자기 왜 이런 사진인지 맥락을 찾는다.', scores: { story_csi: 1 } },
+        { text: '반응하고 싶지만 하트만 누르고 나온다.', scores: { no_react: 1 } },
+        { text: '누군가에게 보여 주려고 올린 건지 생각한다.', scores: { meaning_maker: 1 } },
+      ],
+    },
+    {
+      id: 'q3',
+      text: '내 스토리를 올릴 때 나는?',
+      options: [
+        { text: '공유하고 싶으면 바로 올린다.', scores: { dm_dash: 1 } },
+        { text: '그 사람이 봤는지 은근히 확인한다.', scores: { story_csi: 1 } },
+        { text: '올렸다가 ‘너무 티 났나?’ 싶어 지운다.', scores: { no_react: 1 } },
+        { text: '그 사람이 접속할 만한 시간에 올린다.', scores: { meaning_maker: 1 } },
+      ],
+    },
+    {
+      id: 'q4',
+      text: '내 스토리를 유독 빨리 봤다면?',
+      options: [
+        { text: '그냥 스토리를 자주 보는 사람인가 보다 한다.', scores: { dm_dash: 1 } },
+        { text: '지난번보다 빨랐는지 기억을 더듬는다.', scores: { story_csi: 1 } },
+        { text: '신경 안 쓰는 척 앱을 닫는다.', scores: { no_react: 1 } },
+        { text: '괜히 오늘 스토리를 하나 더 올리고 싶어진다.', scores: { meaning_maker: 1 } },
+      ],
+    },
+  ],
+
+  tieBreaker: ['dm_dash', 'story_csi', 'no_react', 'meaning_maker'],
+
+  results: {
+    dm_dash: {
+      emoji: '💌',
+      title: 'DM 직진러',
+      subtitle: '답장창은 이미 열려 있는 사람',
+      keywords: ['적극성', '솔직함', '대화력'],
+      description:
+        '스토리 한 장을 보면 대화 주제 세 개가 떠오릅니다. 이미 답장창은 열려 있고, 문제는 너무 빨리 답한 티가 날까 봐 30초만 기다리는 것입니다. 마음을 숨기는 데 에너지를 쓰지 않아 관계가 빨리 진전됩니다.',
+      facts: [
+        { label: '답장까지', value: '30초' },
+        { label: '티 남 지수', value: '82%' },
+      ],
+      strengths: ['먼저 다가가기', '대화 소재', '솔직한 표현'],
+      cautions: ['상대의 속도보다 빠를 수 있음'],
+      match: {
+        who: '무반응 고수',
+        why: '먼저 말을 걸어 주는 사람이 없으면 시작되지 않는 쪽이라, 내 직진이 헛되지 않습니다.',
+      },
+      shareText: '스토리 한 장에서 대화 주제 세 개를 뽑아냅니다.',
+    },
+    story_csi: {
+      emoji: '🕵️',
+      title: '스토리 CSI',
+      subtitle: '3초짜리 영상을 8분 동안 보는 사람',
+      keywords: ['관찰력', '추리', '집요함'],
+      description:
+        '사진은 3초짜리인데 태그·배경 음악·테이블 위 컵까지 다 봅니다. “누구랑 갔지?”라는 질문은 이미 마음속에서 브리핑이 끝났습니다. 놓치는 정보가 없는 대신, 알아낸 것을 티 내지 않는 데에도 힘을 씁니다.',
+      facts: [
+        { label: '단서 수집력', value: '96%' },
+        { label: '3초 영상 분석', value: '8분' },
+      ],
+      strengths: ['세밀한 관찰', '기억력', '상황 파악'],
+      cautions: ['알아낸 걸 말할 수 없어 혼자 답답함'],
+      match: {
+        who: '의미 부여 장인',
+        why: '단서를 모으는 나와 이야기를 만드는 쪽이 만나면, 스토리 하나로 밤을 새울 수 있습니다.',
+      },
+      shareText: '태그·음악·테이블 위 컵까지 전부 봤습니다.',
+    },
+    no_react: {
+      emoji: '🕶️',
+      title: '무반응 고수',
+      subtitle: '조회 기록만 남기고 마음은 비행기 모드',
+      keywords: ['자제력', '체면', '속마음'],
+      description:
+        '조회 기록만 남기고 마음은 비행기 모드입니다. 하트 하나도 너무 큰 고백 같아서, 오늘도 조용히 보고 조용히 나옵니다. 감정을 드러내지 않는 능력은 뛰어나지만, 그 덕분에 상대는 아무것도 모릅니다.',
+      facts: [
+        { label: '티 남 지수', value: '11%' },
+        { label: '남긴 흔적', value: '조회 기록뿐' },
+      ],
+      strengths: ['감정 조절', '침착함', '흔적 관리'],
+      cautions: ['아무 티도 안 나서 마음이 전달되지 않음'],
+      match: {
+        who: 'DM 직진러',
+        why: '먼저 문을 두드려 주는 사람이라, 내가 용기를 다 끌어모으지 않아도 됩니다.',
+      },
+      shareText: '봤습니다. 근데 아무 일도 없었던 걸로 합니다.',
+    },
+    meaning_maker: {
+      emoji: '✨',
+      title: '의미 부여 장인',
+      subtitle: '평범한 스토리에 서사를 입히는 사람',
+      keywords: ['상상력', '감수성', '타이밍'],
+      description:
+        '조회자 목록에 그 이름이 뜬 순간, 평범한 스토리가 갑자기 서사를 갖습니다. 호감의 증거는 아니어도 오늘 스토리 하나 더 올릴 명분은 충분합니다. 작은 신호에서 이야기를 만들어내는 재능이 있습니다.',
+      facts: [
+        { label: '의미 부여 지수', value: '93%' },
+        { label: '오늘 올린 스토리', value: '4개' },
+      ],
+      strengths: ['상상력', '감정 표현', '분위기 연출'],
+      cautions: ['혼자 만든 서사에 혼자 흔들림'],
+      match: {
+        who: '스토리 CSI',
+        why: '내가 만든 이야기에 근거를 붙여 주기도, 조용히 정정해 주기도 하는 사람입니다.',
+      },
+      shareText: '조회자 목록에 그 이름이 뜬 순간 서사가 시작됩니다.',
+    },
+  },
+}
+
 /*
  * 결과에 그림을 붙인다.
  *
@@ -577,19 +883,31 @@ const animal = {
  * 맞춰 두었으므로 여기서 한 번에 짝지으면 된다. 결과를 새로 추가할 때
  * 그림만 같은 이름으로 넣으면 자동으로 붙고, 빠뜨리면 아래 경고가 뜬다.
  */
-for (const test of [animal, zombie]) {
+for (const test of [animal, zombie, message, story]) {
   for (const [id, result] of Object.entries(test.results)) {
     result.image = art[test.id]?.[id] ?? ''
-    if (!result.image) console.warn(`[tests] ${test.id}/${id}.jpg 그림을 찾지 못했습니다.`)
+    // 그림이 아직 없는 테스트도 있다 (화면은 이모지로 대신 보여 준다).
+    // 한 장이라도 갖춘 테스트에서만 빠진 것을 알린다 — 없는 폴더까지 경고하면
+    // 콘솔이 시끄러워져 정작 봐야 할 경고를 놓친다.
+    if (!result.image && test.hasResultArt) {
+      console.warn(`[tests] ${test.id}/${id}.jpg 그림을 찾지 못했습니다.`)
+    }
   }
 }
 
 /** 목록 카드의 표지 — 좀비는 한 장, 동물은 네 마리를 모아 붙인다 */
 zombie.cover = [art.zombie.cover]
 animal.cover = [art.animal.dog, art.animal.cat, art.animal.owl, art.animal.fox]
+message.cover = [art.message.cover]
+story.cover = [art.story.cover]
+
+/* 테스트마다 칩 그림을 붙인다 (파일 이름이 곧 테스트 id) */
+for (const test of [animal, zombie, message, story]) {
+  test.chip = chips[test.id] ?? ''
+}
 
 /** 메뉴에 놓이는 순서 */
-export const tests = [animal, zombie]
+export const tests = [animal, zombie, message, story]
 
 export const findTest = (id) => tests.find((test) => test.id === id) ?? null
 
@@ -611,10 +929,26 @@ export const calculateResult = (test, picks) => {
     }
   })
 
-  // 동점이면 tieBreaker 에서 앞선 쪽이 이긴다.
-  // 무작위로 고르면 같은 답인데 결과가 달라져 테스트를 믿지 못하게 된다.
+  /*
+   * 동점이면 tieBreaker 에서 앞선 쪽이 이긴다.
+   * 무작위로 고르면 같은 답인데 결과가 달라져 테스트를 믿지 못하게 된다.
+   *
+   * tieBreak: 'lastPick' 인 테스트(4지선다형)는 마지막 문항에서 고른 유형을
+   * 그 앞에 끼워 넣는다. 4문항 2:2 동점이 흔한데 고정 순서로만 끊으면
+   * 늘 같은 결과가 이겨, 뒤쪽 문항을 아무렇게나 골라도 티가 나지 않는다.
+   */
+  const order = [...test.tieBreaker]
+
+  if (test.tieBreak === 'lastPick') {
+    const last = test.questions.length - 1
+    const lastPicked = test.questions[last]?.options[picks[last]]
+    // 이 유형들은 선택지 하나가 결과 하나에만 점수를 준다 — 키가 곧 유형이다
+    const lastType = lastPicked ? Object.keys(lastPicked.scores)[0] : ''
+    if (lastType) order.unshift(lastType)
+  }
+
   const rank = (id) => {
-    const at = test.tieBreaker.indexOf(id)
+    const at = order.indexOf(id)
     return at === -1 ? Number.MAX_SAFE_INTEGER : at
   }
 

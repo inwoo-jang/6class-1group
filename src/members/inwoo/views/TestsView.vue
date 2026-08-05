@@ -33,7 +33,12 @@ import { link } from '../routes'
             <span class="veil" aria-hidden="true" />
 
             <span class="text">
-              <span class="badge">{{ test.emoji }} {{ test.short }}</span>
+              <span class="badge">
+                <!-- 이모지 대신 그 테스트의 얼굴을 동그랗게 -->
+                <img v-if="test.chip" :src="test.chip" alt="" />
+                <span v-else aria-hidden="true">{{ test.emoji }}</span>
+                {{ test.short }}
+              </span>
               <b>{{ test.title }}</b>
               <small>{{ test.description }}</small>
               <span class="meta">
@@ -154,6 +159,14 @@ h3 {
   gap: 5px;
   height: 100%;
   padding: 16px;
+}
+
+.badge img {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.6);
 }
 
 .badge {

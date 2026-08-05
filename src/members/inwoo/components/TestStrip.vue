@@ -69,7 +69,11 @@ const go = (next) => {
             </span>
 
             <span class="body">
-              <span class="tag">{{ slide.test.emoji }} {{ slide.test.short }}</span>
+              <span class="tag">
+                <img v-if="slide.test.chip" :src="slide.test.chip" alt="" />
+                <span v-else aria-hidden="true">{{ slide.test.emoji }}</span>
+                {{ slide.test.short }}
+              </span>
               <b>{{ slide.title }}</b>
               <small>{{ slide.lead }}</small>
             </span>
@@ -158,6 +162,13 @@ const go = (next) => {
   gap: 3px;
   flex: 1;
   min-width: 0;
+}
+
+.tag img {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .tag {
