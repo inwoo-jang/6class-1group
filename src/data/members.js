@@ -65,9 +65,8 @@ export const MEMBERS = [
     live: '',
   },
   {
-    // 여섯 번째 자리 — 이름이 정해지면 slug 와 name 만 바꾸면 된다
-    slug: 'member6',
-    name: '팀원 6',
+    slug: 'jiyoung',
+    name: '지영',
     title: '',
     role: '아직 소개가 없습니다',
     stack: [],
