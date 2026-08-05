@@ -1,5 +1,6 @@
 <script setup>
 import BaseDashboardCard from '../components/BaseDashboardCard.vue'
+import UiIcon from '../components/UiIcon.vue'
 import { tests } from '../data/personalityTests'
 import { link } from '../routes'
 
@@ -31,6 +32,13 @@ import { link } from '../routes'
             </span>
 
             <span class="veil" aria-hidden="true" />
+
+            <!--
+              카드 배경에 얹는 표시.
+              칩에 넣었더니 테스트마다 칩 모양이 달라져 줄이 어수선했다.
+              배경에 크게 한 번 두면 분위기만 남고 목록은 가지런하다.
+            -->
+            <UiIcon v-if="test.mark" class="card-mark" :name="test.mark" :size="86" />
 
             <span class="text">
               <span class="badge">
@@ -161,7 +169,13 @@ h3 {
   padding: 16px;
 }
 
+/*
+ * 칩 — 그림과 글자를 같은 줄에 세운다.
+ * inline 요소로 두면 글꼴의 밑선을 따라가 그림만 아래로 처져 보인다.
+ * flex 로 묶고 가운데 정렬하면 어느 글꼴에서도 나란히 선다.
+ */
 .badge img {
+  flex: none;
   width: 15px;
   height: 15px;
   border-radius: 50%;
@@ -169,9 +183,24 @@ h3 {
   box-shadow: 0 0 0 1px rgb(255 255 255 / 0.6);
 }
 
+/* 배경 표시 — 읽는 것을 방해하지 않을 만큼만 */
+.card-mark {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  color: #fff;
+  opacity: 0.24;
+  filter: drop-shadow(0 2px 6px rgb(20 30 45 / 0.25));
+  pointer-events: none;
+}
+
 .badge {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
   justify-self: start;
-  padding: 4px 10px;
+  padding: 4px 10px 4px 5px;
   border-radius: 999px;
   background: rgb(255 255 255 / 0.22);
   backdrop-filter: blur(6px);

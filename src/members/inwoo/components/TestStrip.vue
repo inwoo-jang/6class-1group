@@ -164,16 +164,22 @@ const go = (next) => {
   min-width: 0;
 }
 
+/* 그림과 글자를 같은 줄에 세운다 (밑선 정렬이면 그림만 처진다) */
 .tag img {
+  flex: none;
   width: 14px;
   height: 14px;
   border-radius: 50%;
   object-fit: cover;
 }
 
+
 .tag {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
   justify-self: start;
-  padding: 3px 9px;
+  padding: 3px 9px 3px 4px;
   border-radius: 999px;
   background: rgb(255 255 255 / 0.22);
   font-size: 10.5px;

@@ -195,7 +195,7 @@ watch(
           <p class="eyebrow">
             <img v-if="test.chip" :src="test.chip" alt="" />
             <span v-else aria-hidden="true">{{ test.emoji }}</span>
-            {{ test.short }}
+            <span>{{ test.short }}</span>
           </p>
           <h3>{{ test.title }}</h3>
         </div>
@@ -387,14 +387,19 @@ watch(
 }
 
 .eyebrow img {
+  flex: none;
   width: 14px;
   height: 14px;
   border-radius: 50%;
   object-fit: cover;
-  vertical-align: -3px;
 }
 
+
+/* 그림·아이콘·글자를 한 줄에 가운데로 세운다 */
 .eyebrow {
+  display: flex;
+  gap: 5px;
+  align-items: center;
   margin: 0 0 4px;
   color: var(--tone);
   font-family: var(--font-mono);

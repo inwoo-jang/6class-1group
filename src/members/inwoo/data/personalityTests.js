@@ -604,11 +604,12 @@ const animal = {
 const message = {
   id: 'message',
   emoji: '💬',
-  title: '애매한 연락을 받았을 때, 내 마음 급발진 지수',
+  title: '애매한 연락에 내 마음 급발진 지수',
   short: '연락 급발진 지수',
   description:
     '갑자기 온 “할 말 있어” 앞에서, 나는 확인하고 끝낼까 아니면 혼자 서사를 만들까?',
   accent: '#8a6a12',
+  hasResultArt: true,
   tieBreak: 'lastPick',
 
   questions: [
@@ -749,6 +750,7 @@ const story = {
   short: '스토리 반응 테스트',
   description: '3초짜리 스토리 한 장 앞에서 드러나는, 티 내고 싶은 마음과 숨기고 싶은 마음.',
   accent: '#a12a86',
+  hasResultArt: true,
   tieBreak: 'lastPick',
 
   questions: [
@@ -905,6 +907,14 @@ story.cover = [art.story.cover]
 for (const test of [animal, zombie, message, story]) {
   test.chip = chips[test.id] ?? ''
 }
+
+/*
+ * 카드 배경에 크게 얹는 표시.
+ * 아이콘만으로는 '무슨 앱 이야기인지'까지만 읽힌다. 그 앱에서 무엇을 다루는지를
+ * 배경에 한 번 더 얹어 준다 — 마음(하트), 주고받기(종이비행기).
+ */
+message.mark = 'heart'
+story.mark = 'send'
 
 /** 메뉴에 놓이는 순서 */
 export const tests = [animal, zombie, message, story]
