@@ -265,10 +265,15 @@ const dustInfo = computed(() => (props.dustGrade ? DUST_INFO[props.dustGrade] : 
   margin-top: 4px;
 }
 
+/*
+ * 대시보드 옆자리에 붙는다.
+ * position: fixed 로 화면 오른쪽 끝에 매달면 대시보드와 멀어지므로,
+ * 흐름 안에 두되 sticky 로 스크롤을 따라오게 한다.
+ */
 .magpie-nest.floating {
-  position: fixed;
-  top: 210px;
-  right: 32px;
+  position: sticky;
+  top: 24px;
+  flex: none;
   width: 260px;
   z-index: 20;
 }
