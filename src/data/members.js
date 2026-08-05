@@ -71,14 +71,14 @@ export const MEMBERS = [
     live: '',
   },
   {
-    slug: 'jiyoung',
-    name: '지영',
-    title: '',
-    role: '아직 소개가 없습니다',
-    stack: [],
-    accent: '#3a6b6b',
-    live: '',
-  },
+  slug: 'jiyoung',
+  name: '지영',
+  title: 'Weather & Menu Recommend',
+  role: '실시간 날씨 대시보드와 날씨 기반 오늘의 메뉴 추천',
+  stack: ['Vue Router', 'Pinia', 'Axios', 'Element Plus'],
+  accent: '#6c4ab6',
+  live: 'https://calocjl.github.io/skala-vue/',
+},
 ]
 
 export const findMember = (slug) => MEMBERS.find((m) => m.slug === slug) ?? null
