@@ -6,7 +6,7 @@ import {
   removeRecord,
   updateMemo,
 } from '../data/fortuneApi'
-import { READING_TYPES } from '../data/tarotReading'
+
 
 /**
  * 운세 기록 Store — 목록 · 등록 · 메모 수정 · 삭제
@@ -18,14 +18,16 @@ import { READING_TYPES } from '../data/tarotReading'
  * 서버와 이야기하는 방식은 fortuneApi.js 가, 그 결과를 담는 일은 여기가 맡는다.
  */
 /**
- * 기록 종류 — 타로 화면의 탭과 같은 목록이어야 한다.
- * 원본은 tarotReading.js 가 들고 있고, 여기서는 그것을 그대로 가져다 쓴다.
- * 두 곳에 따로 적어 두면 탭을 늘렸을 때 한쪽만 고치고 잊게 된다.
+ * 기록의 큰 갈래. 목록 위 필터는 이 둘로만 나눈다.
  *
- * (export … from 으로 곧장 넘기면 이 파일 안에서는 이름을 쓸 수 없다.
- *  아래 typeCounts 가 이 목록을 세야 하므로 한 번 받아서 다시 내보낸다.)
+ * '오늘의 운세'·'솔로연애운' 같은 세부 이름으로 필터를 만들면 칩이 계속 늘어나고,
+ * 테스트가 추가될 때마다 또 늘어난다. 세부 이름은 각 기록 카드 안에서 보여 주고,
+ * 위에서는 운세인지 테스트인지만 고르게 한다.
  */
-export const RECORD_TYPES = READING_TYPES
+export const RECORD_KINDS = [
+  { key: 'tarot', label: '운세', emoji: '🔮' },
+  { key: 'test', label: '테스트', emoji: '🧪' },
+]
 
 export const useRecordStore = defineStore('fortuneRecord', () => {
   // ── state ──
@@ -35,7 +37,7 @@ export const useRecordStore = defineStore('fortuneRecord', () => {
   const errorMessage = ref('')
 
   /** 목록 위 필터 — 빈 문자열이면 전체 */
-  const filterType = ref('')
+  const filterKind = ref('')
 
   // ── getters ──
   const count = computed(() => records.value.length)
@@ -47,11 +49,11 @@ export const useRecordStore = defineStore('fortuneRecord', () => {
    */
   const allRecords = ref([])
 
-  const typeCounts = computed(() =>
-    RECORD_TYPES.reduce(
-      (acc, type) => ({
+  const kindCounts = computed(() =>
+    RECORD_KINDS.reduce(
+      (acc, { key }) => ({
         ...acc,
-        [type]: allRecords.value.filter((record) => record.type === type).length,
+        [key]: allRecords.value.filter((record) => (record.kind ?? 'tarot') === key).length,
       }),
       {},
     ),
@@ -65,8 +67,8 @@ export const useRecordStore = defineStore('fortuneRecord', () => {
     errorMessage.value = ''
     try {
       const [filtered, all] = await Promise.all([
-        fetchRecords(filterType.value),
-        filterType.value ? fetchRecords('') : Promise.resolve(null),
+        fetchRecords(filterKind.value),
+        filterKind.value ? fetchRecords('') : Promise.resolve(null),
       ])
       records.value = filtered
       // 필터가 없으면 방금 받은 목록이 곧 전체다 — 같은 걸 두 번 받지 않는다
@@ -81,8 +83,8 @@ export const useRecordStore = defineStore('fortuneRecord', () => {
   }
 
   /** 필터를 바꾸면 곧바로 다시 받아 온다 */
-  const setFilter = async (type) => {
-    filterType.value = type
+  const setFilter = async (kind) => {
+    filterKind.value = kind
     await load()
   }
 
@@ -97,7 +99,7 @@ export const useRecordStore = defineStore('fortuneRecord', () => {
     try {
       const saved = await createRecord(payload)
       allRecords.value = [saved, ...allRecords.value]
-      if (!filterType.value || filterType.value === saved.type) {
+      if (!filterKind.value || filterKind.value === (saved.kind ?? 'tarot')) {
         records.value = [saved, ...records.value]
       }
       return saved
@@ -144,7 +146,7 @@ export const useRecordStore = defineStore('fortuneRecord', () => {
   const clear = () => {
     records.value = []
     allRecords.value = []
-    filterType.value = ''
+    filterKind.value = ''
     errorMessage.value = ''
   }
 
@@ -154,9 +156,9 @@ export const useRecordStore = defineStore('fortuneRecord', () => {
     isLoading,
     isSaving,
     errorMessage,
-    filterType,
+    filterKind,
     count,
-    typeCounts,
+    kindCounts,
     load,
     setFilter,
     add,

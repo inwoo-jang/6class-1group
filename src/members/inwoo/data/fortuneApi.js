@@ -139,10 +139,10 @@ export const fetchMe = async () => {
 
 /* ── 운세 기록 ──────────────────────────────────────────────────── */
 
-/** 내 기록 목록. type 을 주면 그 종류만 받는다 (최근 것이 앞) */
-export const fetchRecords = async (type = '') => {
+/** 내 기록 목록. kind('tarot' | 'test') 를 주면 그 종류만 받는다 (최근 것이 앞) */
+export const fetchRecords = async (kind = '') => {
   const { data } = await api.get('/api/fortune-records', {
-    params: type ? { type } : undefined,
+    params: kind ? { kind } : undefined,
   })
   return data
 }

@@ -4,25 +4,33 @@ import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import BaseDashboardCard from '../components/BaseDashboardCard.vue'
 import UiIcon from '../components/UiIcon.vue'
-import { RECORD_TYPES, useRecordStore } from '../stores/recordStore'
+import { RECORD_KINDS, useRecordStore } from '../stores/recordStore'
 import { useAuthStore } from '../stores/authStore'
+import { findTest } from '../data/personalityTests'
 import { link } from '../routes'
 
 /**
- * 운세 기록 — /final/records
+ * 기록 — /final/records
  *
- * 타로 화면에서 남긴 기록을 다시 꺼내 본다.
- *   조회  GET    /api/fortune-records        (?type= 으로 종류만 추림)
+ * 운세와 심리테스트를 한 곳에 모아 둔다.
+ *   조회  GET    /api/fortune-records        (?kind=tarot|test)
  *   수정  PATCH  /api/fortune-records/:id    (메모만)
  *   삭제  DELETE /api/fortune-records/:id
  *
- * 서버는 토큰의 주인 것만 내어 주므로, 화면에서 "내 것인지" 따로 거를 필요가 없다.
+ * 위쪽 필터는 운세/테스트 둘로만 나눈다. '오늘의 운세'·'솔로연애운' 같은
+ * 세부 이름은 각 카드 안의 배지로 보여 준다 — 종류가 늘어도 필터가 늘지 않는다.
  */
 const auth = useAuthStore()
 const { displayName } = storeToRefs(auth)
 
 const store = useRecordStore()
-const { records, isLoading, errorMessage, filterType, count, typeCounts } = storeToRefs(store)
+const { records, isLoading, errorMessage, filterKind, count, kindCounts } = storeToRefs(store)
+
+/** 테스트 기록은 저장된 id 로 지금 번들의 그림을 다시 찾아 쓴다 */
+const artOf = (record) => {
+  if (record.kind !== 'test' || !record.meta) return ''
+  return findTest(record.meta.testId)?.results?.[record.meta.resultId]?.image ?? ''
+}
 
 /* ── 메모 수정 ──────────────────────────────────────────────────── */
 
@@ -92,7 +100,7 @@ const formatDate = (iso) => dateFormatter.format(new Date(iso))
 
 /** 카드 세 장을 "정/역"까지 한 줄로 */
 const cardLine = (cards) =>
-  cards.map((card) => `${card.name}${card.reversed ? '(역)' : ''}`).join(' · ')
+  (cards ?? []).map((card) => `${card.name}${card.reversed ? '(역)' : ''}`).join(' · ')
 
 onMounted(() => store.load())
 </script>
@@ -102,9 +110,9 @@ onMounted(() => store.load())
     <div class="records">
       <header class="head">
         <div>
-          <h3>운세 기록</h3>
+          <h3>기록</h3>
           <p class="lead">
-            <b>{{ displayName }}</b>님이 남긴 기록 <b>{{ count }}</b>건
+            <b>{{ displayName }}</b>님이 남긴 운세와 테스트 <b>{{ count }}</b>건
           </p>
         </div>
 
@@ -120,19 +128,21 @@ onMounted(() => store.load())
         </el-button>
       </header>
 
-      <!-- 종류 필터 — 서버에 ?type= 으로 넘어간다 -->
-      <div class="filters" role="group" aria-label="운세 종류">
-        <button type="button" :class="{ on: filterType === '' }" @click="store.setFilter('')">
+      <!-- 필터는 운세 / 테스트 둘뿐이다 -->
+      <div class="filters" role="group" aria-label="기록 종류">
+        <button type="button" :class="{ on: filterKind === '' }" @click="store.setFilter('')">
           전체 <span class="num">{{ store.allRecords.length }}</span>
         </button>
         <button
-          v-for="type in RECORD_TYPES"
-          :key="type"
+          v-for="kind in RECORD_KINDS"
+          :key="kind.key"
           type="button"
-          :class="{ on: filterType === type }"
-          @click="store.setFilter(type)"
+          :class="{ on: filterKind === kind.key }"
+          @click="store.setFilter(kind.key)"
         >
-          {{ type }} <span class="num">{{ typeCounts[type] ?? 0 }}</span>
+          <span aria-hidden="true">{{ kind.emoji }}</span>
+          {{ kind.label }}
+          <span class="num">{{ kindCounts[kind.key] ?? 0 }}</span>
         </button>
       </div>
 
@@ -143,20 +153,36 @@ onMounted(() => store.load())
 
       <p v-else-if="isLoading && !records.length" class="notice">기록을 불러오는 중입니다…</p>
 
-      <!-- 비어 있을 때도 다음에 무엇을 하면 되는지 알려 준다 -->
       <p v-else-if="!records.length" class="notice empty">
         아직 남긴 기록이 없습니다.
-        <RouterLink :to="link('tarot')">운세를 보고</RouterLink> 마음에 드는 해석을 저장해 보세요.
+        <RouterLink :to="link('tarot')">운세</RouterLink>나
+        <RouterLink :to="link('tests')">테스트</RouterLink>를 보고 결과를 저장해 보세요.
       </p>
 
       <ul v-else class="list">
-        <li v-for="record in records" :key="record.id">
+        <li v-for="record in records" :key="record.id" :class="record.kind ?? 'tarot'">
           <div class="row">
-            <span class="type">{{ record.type }}</span>
+            <!-- 세부 종류는 여기서 보여 준다 (오늘의 운세 · 영혼 동물 테스트 …) -->
+            <span class="type">
+              <span aria-hidden="true">{{ (record.kind ?? 'tarot') === 'test' ? '🧪' : '🔮' }}</span>
+              {{ record.type }}
+            </span>
             <time :datetime="record.createdAt">{{ formatDate(record.createdAt) }}</time>
           </div>
 
-          <p class="cards">{{ cardLine(record.cards) }}</p>
+          <!-- ① 테스트 — 그림 + 결과 이름 -->
+          <div v-if="record.kind === 'test' && record.meta" class="test-result">
+            <img v-if="artOf(record)" :src="artOf(record)" :alt="`${record.meta.title} 그림`" />
+            <span v-else class="face" aria-hidden="true">{{ record.meta.emoji }}</span>
+            <span>
+              <b>{{ record.meta.emoji }} {{ record.meta.title }}</b>
+              <small>{{ record.meta.subtitle }}</small>
+            </span>
+          </div>
+
+          <!-- ② 운세 — 뽑은 카드 -->
+          <p v-else-if="record.cards?.length" class="cards">{{ cardLine(record.cards) }}</p>
+
           <p class="reading">{{ record.reading }}</p>
 
           <!-- 메모: 보는 중 / 고치는 중 두 모습 -->
@@ -167,7 +193,7 @@ onMounted(() => store.load())
               :rows="3"
               maxlength="200"
               show-word-limit
-              placeholder="이 운세에 대해 남기고 싶은 말"
+              placeholder="이 기록에 남기고 싶은 말"
             />
             <div class="memo-actions">
               <el-button size="small" :loading="isSavingMemo" type="primary" @click="saveMemo(record)">
@@ -233,7 +259,7 @@ h3 {
   display: inline-flex;
   gap: 6px;
   align-items: center;
-  padding: 6px 12px;
+  padding: 7px 14px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface);
@@ -276,8 +302,14 @@ h3 {
   gap: 8px;
   padding: 14px;
   border: 1px solid var(--line);
+  border-left: 3px solid var(--accent-line);
   border-radius: 8px;
   background: var(--panel-inner, var(--surface));
+}
+
+/* 테스트 기록은 왼쪽 선 색으로 한눈에 구분된다 */
+.list li.test {
+  border-left-color: var(--slate);
 }
 
 .row {
@@ -288,6 +320,9 @@ h3 {
 }
 
 .type {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
   padding: 3px 10px;
   border-radius: 999px;
   background: var(--accent-tint);
@@ -296,12 +331,58 @@ h3 {
   font-weight: 700;
 }
 
+.list li.test .type {
+  background: var(--slate-tint);
+  color: var(--slate);
+}
+
 time {
   color: var(--faint);
   font-family: var(--font-mono);
   font-size: 11.5px;
 }
 
+/* ── 테스트 결과 ── */
+.test-result {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.test-result img {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  object-fit: cover;
+}
+
+.test-result .face {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: var(--slate-tint);
+  font-size: 24px;
+}
+
+.test-result span {
+  display: grid;
+  gap: 2px;
+}
+
+.test-result b {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.test-result small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ── 운세 카드 ── */
 .cards {
   margin: 0;
   color: var(--ink-soft);

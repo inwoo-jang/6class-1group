@@ -96,12 +96,28 @@ const readBody = (config) => {
 const readAuthorization = (config) =>
   config.headers?.get?.('Authorization') ?? config.headers?.Authorization ?? ''
 
+/*
+ * mock-api/server.js 의 validateRecord 와 같은 규칙이어야 한다.
+ * 여기가 느슨하면 로컬에서는 막히던 값이 배포본에서만 저장되는 일이 생긴다.
+ */
 const validateRecord = (input) => {
-  if (!TYPES.includes(input.type)) return '운세 종류를 선택해 주세요.'
-  if (!Array.isArray(input.cards) || input.cards.length !== 3) return '카드 세 장이 필요합니다.'
-  if (typeof input.reading !== 'string' || !input.reading.trim()) return '운세 해석이 필요합니다.'
+  const kind = input.kind ?? 'tarot'
+  if (!['tarot', 'test'].includes(kind)) return '기록 종류가 올바르지 않습니다.'
+  if (typeof input.reading !== 'string' || !input.reading.trim()) return '기록할 내용이 필요합니다.'
   if (typeof input.memo !== 'undefined' && typeof input.memo !== 'string') {
     return '메모 형식이 올바르지 않습니다.'
+  }
+
+  if (kind === 'tarot') {
+    if (!TYPES.includes(input.type)) return '운세 종류를 선택해 주세요.'
+    if (!Array.isArray(input.cards) || input.cards.length !== 3) return '카드 세 장이 필요합니다.'
+    return ''
+  }
+
+  if (typeof input.type !== 'string' || !input.type.trim()) return '테스트 이름이 필요합니다.'
+  if (!input.meta || typeof input.meta !== 'object') return '테스트 결과 정보가 필요합니다.'
+  if (typeof input.meta.testId !== 'string' || typeof input.meta.resultId !== 'string') {
+    return '테스트 결과 정보가 올바르지 않습니다.'
   }
   return ''
 }
@@ -143,9 +159,10 @@ export const handleLocally = (config) => {
   }
 
   if (method === 'GET' && path === '/api/fortune-records') {
-    const type = config.params?.type
+    // 필터는 종류(운세/테스트)로만 건다. 세부 이름은 카드 안에서 보여 준다.
+    const kind = config.params?.kind
     const owned = readAll().filter(
-      (record) => record.userId === user.id && (!type || record.type === type),
+      (record) => record.userId === user.id && (!kind || (record.kind ?? 'tarot') === kind),
     )
     return Promise.resolve(ok(config, 200, [...owned].reverse()))
   }
@@ -160,9 +177,11 @@ export const handleLocally = (config) => {
     const record = {
       id: Math.max(0, ...records.map((item) => item.id)) + 1,
       userId: user.id,
+      kind: input.kind ?? 'tarot',
       type: input.type,
-      cards: input.cards,
+      cards: input.cards ?? [],
       reading: input.reading,
+      meta: input.meta ?? null,
       memo: input.memo ?? '',
       createdAt: now,
       updatedAt: now,

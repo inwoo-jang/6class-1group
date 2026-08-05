@@ -1,11 +1,9 @@
 import http from 'node:http'
-import process from 'node:process'
 import { createRecord, records, resetRecords, users } from './data/stores.js'
-import { handleDongyeolRoutes } from './dongyeol/index.js'
 import { readJson, sendJson } from './utils/http.js'
 import { createToken, verifyToken } from './utils/token.js'
 
-const port = Number(process.env.API_PORT ?? 3001)
+const port = 3001
 const recordPath = /^\/api\/fortune-records\/(\d+)$/
 
 const publicUser = ({ id, email, name, role }) => ({ id, email, name, role })
@@ -14,13 +12,34 @@ const authorizedUser = (request) => {
   return token ? users.find((user) => user.id === token.sub) : null
 }
 
+/*
+ * 기록은 두 종류다.
+ *   kind: 'tarot'  타로 세 장 — 종류가 정해져 있고 카드가 반드시 3장
+ *   kind: 'test'   심리테스트 — 테스트 이름은 화면이 정하고 카드가 없다
+ *
+ * 종류를 안 적어 보내면 'tarot' 로 본다. 먼저 만든 타로 기록과
+ * 예전 화면이 그대로 동작해야 하기 때문이다.
+ */
 const validateRecord = (input) => {
-  // 화면의 탭과 같은 목록 (src/final/data/tarotReading.js 의 READING_TYPES)
-  const types = ['오늘의 운세', '솔로연애운', '커플연애운']
-  if (!types.includes(input.type)) return '운세 종류를 선택해 주세요.'
-  if (!Array.isArray(input.cards) || input.cards.length !== 3) return '카드 세 장이 필요합니다.'
-  if (typeof input.reading !== 'string' || !input.reading.trim()) return '운세 해석이 필요합니다.'
+  const kind = input.kind ?? 'tarot'
+  if (!['tarot', 'test'].includes(kind)) return '기록 종류가 올바르지 않습니다.'
+  if (typeof input.reading !== 'string' || !input.reading.trim()) return '기록할 내용이 필요합니다.'
   if (typeof input.memo !== 'undefined' && typeof input.memo !== 'string') return '메모 형식이 올바르지 않습니다.'
+
+  if (kind === 'tarot') {
+    // 화면의 탭과 같은 목록 (src/final/data/tarotReading.js 의 READING_TYPES)
+    const types = ['오늘의 운세', '솔로연애운', '커플연애운']
+    if (!types.includes(input.type)) return '운세 종류를 선택해 주세요.'
+    if (!Array.isArray(input.cards) || input.cards.length !== 3) return '카드 세 장이 필요합니다.'
+    return ''
+  }
+
+  // 테스트는 종류가 늘어날 수 있어 이름만 확인한다
+  if (typeof input.type !== 'string' || !input.type.trim()) return '테스트 이름이 필요합니다.'
+  if (!input.meta || typeof input.meta !== 'object') return '테스트 결과 정보가 필요합니다.'
+  if (typeof input.meta.testId !== 'string' || typeof input.meta.resultId !== 'string') {
+    return '테스트 결과 정보가 올바르지 않습니다.'
+  }
   return ''
 }
 
@@ -30,8 +49,6 @@ const server = http.createServer(async (request, response) => {
   const match = url.pathname.match(recordPath)
 
   try {
-    if (await handleDongyeolRoutes(request, response, url)) return
-
     if (request.method === 'GET' && url.pathname === '/api/health') {
       return sendJson(response, 200, { status: 'ok', recordCount: records.length })
     }
@@ -53,8 +70,11 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'GET' && url.pathname === '/api/auth/me') return sendJson(response, 200, publicUser(user))
 
     if (request.method === 'GET' && url.pathname === '/api/fortune-records') {
-      const type = url.searchParams.get('type')
-      const owned = records.filter((record) => record.userId === user.id && (!type || record.type === type))
+      // 필터는 종류(운세/테스트)로만 건다. 세부 이름은 카드 안에서 보여 준다.
+      const kind = url.searchParams.get('kind')
+      const owned = records.filter(
+        (record) => record.userId === user.id && (!kind || (record.kind ?? 'tarot') === kind),
+      )
       return sendJson(response, 200, [...owned].reverse())
     }
     if (request.method === 'POST' && url.pathname === '/api/fortune-records') {

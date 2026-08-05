@@ -51,6 +51,17 @@ export default [
     component: () => import('./views/TarotView.vue'),
   },
   {
+    path: 'tests',
+    name: 'tests',
+    component: () => import('./views/TestsView.vue'),
+  },
+  {
+    // :testId 자리에 animal · zombie 가 들어온다
+    path: 'tests/:testId',
+    name: 'test',
+    component: () => import('./views/TestPlayView.vue'),
+  },
+  {
     path: 'login',
     name: 'login',
     component: () => import('./views/LoginView.vue'),

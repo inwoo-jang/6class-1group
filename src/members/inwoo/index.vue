@@ -28,10 +28,13 @@ const router = useRouter()
 /** 상세 화면에서도 '날씨' 탭이 눌린 채로 남아야 한다 */
 const isWeather = computed(() => route.name === 'inwoo.weather' || route.name === 'inwoo.detail')
 const isTarot = computed(() => route.name === 'inwoo.tarot')
+/** 테스트 진행 화면에서도 '테스트' 탭이 눌린 채로 남아야 한다 */
+const isTests = computed(() => route.name === 'inwoo.tests' || route.name === 'inwoo.test')
 const isRecords = computed(() => route.name === 'inwoo.records')
 const isLogin = computed(() => route.name === 'inwoo.login')
 const isHome = computed(
-  () => !isWeather.value && !isTarot.value && !isRecords.value && !isLogin.value,
+  () =>
+    !isWeather.value && !isTarot.value && !isTests.value && !isRecords.value && !isLogin.value,
 )
 
 /**
@@ -67,6 +70,7 @@ const logout = () => {
         <RouterLink :to="link('home')" :class="{ on: isHome }">홈</RouterLink>
         <RouterLink :to="link('weather')" :class="{ on: isWeather }">날씨</RouterLink>
         <RouterLink :to="link('tarot')" :class="{ on: isTarot }">운세</RouterLink>
+        <RouterLink :to="link('tests')" :class="{ on: isTests }">테스트</RouterLink>
         <RouterLink :to="link('records')" :class="{ on: isRecords }">기록</RouterLink>
 
         <code class="url">{{ route.path }}</code>

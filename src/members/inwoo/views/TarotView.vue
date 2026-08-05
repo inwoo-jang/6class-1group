@@ -159,6 +159,8 @@ const saveReading = async () => {
   if (!isComplete.value || !readingText.value.trim()) return
 
   const saved = await recordStore.add({
+    // 기록함에는 운세와 테스트가 함께 담긴다. 어느 쪽인지 밝혀 둔다.
+    kind: 'tarot',
     // 고를 필요가 없다 — 지금 보고 있는 탭이 곧 이 기록의 종류다
     type: activeType.value,
     // 서버는 세 장을 그대로 보관한다. 나중에 목록에서 다시 보여 줘야 하므로
@@ -189,6 +191,20 @@ const chooseCard = (card) => {
     { card, reversed: allowReversed.value && Math.random() >= 0.5 },
   ]
 
+}
+
+/**
+ * 아직 안 채운 자리를 누르면 카드 뽑는 곳으로 데려간다.
+ *
+ * 자리와 덱이 세로로 떨어져 있어서, 자리를 눌러 놓고 "그래서 어디서 고르지?"
+ * 하고 다시 스크롤을 내리게 된다. 눌린 자리가 곧 지금 고를 자리이므로
+ * 그대로 덱까지 따라가 준다.
+ */
+const deckRef = ref(null)
+
+const goToDeck = () => {
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  deckRef.value?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
 }
 
 const drawAgain = () => {
@@ -238,6 +254,14 @@ const drawAgain = () => {
         class="slot"
         :class="{ filled: picks[index], active: !picks[index] && currentSlot?.no === slot.no }"
       >
+        <!-- 빈 자리를 누르면 아래 덱으로 데려간다 -->
+        <button
+          v-if="!picks[index] && !isComplete"
+          type="button"
+          class="slot-jump"
+          :aria-label="`${slot.no}번 자리 — 카드 뽑는 곳으로 이동`"
+          @click="goToDeck"
+        ></button>
         <p class="slot-label"><b>{{ slot.no }}</b> {{ slot.label }}</p>
 
         <div class="slot-frame">
@@ -324,7 +348,7 @@ const drawAgain = () => {
     </section>
 
     <!-- 카드 고르기 -->
-    <section v-if="!isComplete" class="tarot-deck" aria-label="타로 카드 선택">
+    <section v-if="!isComplete" ref="deckRef" class="tarot-deck" aria-label="타로 카드 선택">
       <div>
         <p class="tarot-kind">78 CARDS SHUFFLED</p>
         <h2 v-if="currentSlot">{{ currentSlot.no }}번 — {{ currentSlot.title }}</h2>
@@ -405,18 +429,20 @@ h1, h2 { margin: 0; color: var(--ink); font-weight: 600; }
 h1 { font-size: 34px; line-height: 1.15; }
 h2 { font-size: 24px; line-height: 1.25; }
 .tarot-intro p { margin: 12px 0 0; color: var(--ink-soft); line-height: 1.65; }
-/* 안내 한 줄 — 판을 깔지 않고 왼쪽에 가는 선만 세운다 */
-.tarot-cta { display: block; margin-top: 16px !important; padding: 2px 0 2px 14px; border-left: 2px solid var(--mystic-line); border-radius: 0; background: transparent; color: var(--muted); font-size: 13px; }
+.tarot-cta { display: inline-block; margin-top: 14px !important; padding: 10px 16px; border-radius: 12px; background: var(--mystic-soft); color: var(--ink-soft); font-size: 13px; }
 .tarot-cta b { color: var(--mystic); }
 
 /* ── 세 자리 ── */
-.spread { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; padding: 24px; }
-.slot { display: grid; gap: 8px; align-content: start; }
+.spread { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; padding: 18px 20px; }
+.slot { position: relative; display: grid; gap: 8px; align-content: start; }
 .slot-label { display: flex; gap: 6px; align-items: center; margin: 0; color: var(--faint); font-family: var(--font-mono); font-size: 11px; }
-/* 번호는 채운 원 대신 테두리만 — 카드 그림이 주인공이라 옆에서 조용해야 한다 */
-.slot-label b { display: grid; width: 18px; height: 18px; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--muted); background: transparent; font-size: 10px; font-weight: 600; }
-.slot.filled .slot-label b, .slot.active .slot-label b { border-color: var(--mystic-line); color: var(--mystic); background: transparent; }
-.slot-frame { width: 100%; aspect-ratio: 1144 / 1919; overflow: hidden; border-radius: 12px; box-shadow: 0 12px 24px #17132530; transition: transform .3s ease; }
+.slot-label b { display: grid; width: 18px; height: 18px; place-items: center; border-radius: 50%; color: var(--on-accent); background: var(--line-strong); font-size: 10.5px; }
+.slot.filled .slot-label b, .slot.active .slot-label b { background: var(--mystic); }
+/* 자리 카드는 작게 — 이게 크면 아래 '카드 뽑는 곳'이 화면 밖으로 밀려난다 */
+.slot-frame { position: relative; width: 100%; max-width: 132px; margin: 0 auto; aspect-ratio: 1144 / 1919; overflow: hidden; border-radius: 12px; box-shadow: 0 8px 18px #17132528; transition: transform .3s ease; }
+/* 빈 자리를 덮는 투명 버튼 — 누르면 덱으로 내려간다 */
+.slot-jump { position: absolute; inset: 0; z-index: 2; border: 0; border-radius: 12px; background: transparent; cursor: pointer; }
+.slot-jump:focus-visible { outline: 2px solid var(--mystic); outline-offset: 2px; }
 .slot.active .slot-frame { transform: translateY(-4px); }
 .slot-image { display: block; width: 100%; height: 100%; object-fit: cover; }
 .slot-image.reversed { transform: rotate(180deg); }
@@ -428,7 +454,7 @@ h2 { font-size: 24px; line-height: 1.25; }
 .slot.active .slot-wait { color: var(--mystic); font-weight: 700; }
 @keyframes breathe { 50% { opacity: .72; } }
 @media (prefers-reduced-motion: reduce) { .slot.active .slot-empty { animation: none; } }
-.slot-title { margin: 0; color: var(--ink); font-size: 13px; font-weight: 600; line-height: 1.4; }
+.slot-title { margin: 0; color: var(--ink); font-size: 12.5px; font-weight: 600; line-height: 1.4; }
 .slot-card { margin: 0; color: var(--muted); font-size: 12px; }
 .slot-card.empty { color: var(--faint); }
 .slot-card .up { color: var(--mystic); font-weight: 700; }
@@ -502,24 +528,12 @@ h2 { font-size: 24px; line-height: 1.25; }
  * 아래에 실선을 그어 "여기서 고른 것이 아래 내용"임을 보인다.
  * 세 칸은 아래 .spread 와 같은 3등분이라 세로선이 맞아떨어진다.
  */
-/*
- * 탭 — 색을 칠하지 않고 밑줄 하나로 고른 것을 알린다.
- *
- * 예전에는 고른 칸을 보라색으로 꽉 채웠다. 세 칸 중 하나만 색 덩어리라
- * 눈이 그리로만 쏠리고, 나머지는 맨 글자로 남아 위계가 어색했다.
- * 이 결과물은 색을 아껴 쓸수록 눌러야 할 곳이 또렷해지는 편집 디자인이라,
- * 채우는 대신 글자의 굵기·색과 얇은 밑줄로만 구분한다.
- */
-.kind-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: -28px -28px 22px; padding: 0 14px; border-bottom: 1px solid var(--line); }
-.kind-tabs button { position: relative; display: grid; gap: 3px; padding: 16px 10px 14px; border: 0; background: transparent; color: var(--muted); cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 600; text-align: left; transition: color .2s ease; }
-.kind-tabs button small { color: var(--faint); font-size: 11px; font-weight: 400; letter-spacing: .01em; transition: color .2s ease; }
-
-/* 고른 칸 아래에만 놓이는 얇은 선. 컨테이너의 실선 위에 겹쳐 덮는다 */
-.kind-tabs button::after { content: ''; position: absolute; right: 10px; bottom: -1px; left: 10px; height: 2px; border-radius: 2px; background: var(--mystic); opacity: 0; transition: opacity .2s ease; }
-.kind-tabs button:hover { color: var(--ink-soft); }
-.kind-tabs button.on { color: var(--mystic); font-weight: 700; }
-.kind-tabs button.on small { color: var(--muted); }
-.kind-tabs button.on::after { opacity: 1; }
+.kind-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: -28px -28px 20px; padding: 10px 10px 12px; border-bottom: 1px solid var(--line); }
+.kind-tabs button { display: grid; gap: 2px; padding: 11px 16px; border: 1px solid transparent; border-radius: 12px; background: transparent; color: var(--muted); cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 700; text-align: left; transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease; }
+.kind-tabs button small { color: var(--faint); font-size: 11px; font-weight: 500; }
+.kind-tabs button:hover { border-color: var(--mystic-line, var(--line)); color: var(--mystic); }
+.kind-tabs button.on { border-color: var(--mystic); background: var(--mystic); color: var(--on-accent); }
+.kind-tabs button.on small { color: inherit; opacity: 0.75; }
 
 /* ── 기록 남기기 ── */
 .save-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--mystic-line, var(--line)); }
@@ -534,7 +548,7 @@ h2 { font-size: 24px; line-height: 1.25; }
 
 @media (max-width: 640px) {
   .spread { grid-template-columns: 1fr; }
-  .slot-frame { max-width: 220px; }
+  .slot-frame { max-width: 150px; }
 }
 @media (max-width: 540px) {
   .tarot-card-grid { grid-template-columns: repeat(10, 1fr); gap: 4px; }

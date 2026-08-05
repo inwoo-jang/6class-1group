@@ -6,6 +6,7 @@ import WeatherIcon from '../components/WeatherIcon.vue'
 import UiIcon from '../components/UiIcon.vue'
 import { fetchWeather, nearestCity } from '../components/weatherApi'
 import { backdropStatus } from '../data/backdropState'
+import TestStrip from '../components/TestStrip.vue'
 import { useConfigStore } from '../stores/configStore'
 import { link } from '../routes'
 
@@ -176,6 +177,9 @@ const tone = computed(() => {
         <small>타로로 오늘의 운세 보기</small>
       </RouterLink>
     </section>
+
+    <!-- 맨 아래 — 3초마다 옆으로 넘어가며 테스트를 흘려 준다 -->
+    <TestStrip />
   </main>
 </template>
 
