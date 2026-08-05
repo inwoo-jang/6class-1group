@@ -249,11 +249,15 @@ onBeforeUnmount(() => {
  * 그레이 → 초록 → 하늘을 옅게 흘려 유리처럼 비치게 했다.
  * 배경을 반투명으로 두고 blur 를 걸어 뒤 배경이 은은히 배어 나오게 한다.
  */
+/*
+ * 안내는 쿠키보다 조금 넓게 빼 둔다 — 글자가 꽉 차 있으면 눌러야 하는
+ * 것보다 '적혀 있는 것' 처럼 보인다. 좁은 화면에서는 칸을 넘으므로 되돌린다.
+ */
 .label {
   position: absolute;
-  right: 0;
+  right: -14px;
   bottom: 0;
-  left: 0;
+  left: -14px;
   overflow: hidden;
   padding: 11px 12px;
   border: 1px solid rgb(255 255 255 / 0.55);
@@ -507,6 +511,8 @@ onBeforeUnmount(() => {
 /* 좁은 화면 — 라벨이 쿠키 칸을 넘어가면 히어로 밖으로 삐져나온다 */
 @media (max-width: 720px) {
   .label {
+    right: 0;
+    left: 0;
     padding: 5px 8px;
     font-size: 10.5px;
     letter-spacing: -0.03em;
