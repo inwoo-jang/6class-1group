@@ -78,6 +78,8 @@ onMounted(() => {
     ([entry]) => {
       if (!entry.isIntersecting) return
       seen.value = true
+      // load 를 못 받는 경우를 대비해 늦어도 이때는 걷는다
+      settle(MAX_WAIT_MS)
       io.disconnect()
     },
     { rootMargin: '200px' },
@@ -91,9 +93,40 @@ onMounted(() => {
   ro.observe(box.value)
 })
 
+/**
+ * 안쪽 화면이 자리를 잡을 때까지 덮개를 걷지 않는다.
+ * ------------------------------------------------------------------
+ * iframe 의 load 는 문서를 받았다는 뜻일 뿐, 그 안의 앱이 그려졌다는 뜻이 아니다.
+ * 곧바로 보여 주면 "불러오는 중" 이나 잠깐 스치는 오류 문구가 카드에 그대로
+ * 비친다. 카드에 걸려야 하는 것은 결과물이지 결과물을 기다리는 모습이 아니다.
+ *
+ * 그래서 문서를 받은 뒤 잠깐 더 덮어 둔다. 미리보기 안에서는 날씨도 받아 둔
+ * 값을 곧바로 내주므로(openMeteo), 이만큼이면 대개 자리를 잡는다.
+ */
+const SETTLE_MS = 1200
+
+/**
+ * load 가 끝내 오지 않아도 이만큼 지나면 걷는다.
+ * 덮개는 잠깐 가려 주자고 있는 것이지, 결과물을 영영 숨기라고 있는 게 아니다.
+ */
+const MAX_WAIT_MS = 5000
+
+const settled = ref(false)
+let settleTimer = null
+
+const settle = (delay) => {
+  clearTimeout(settleTimer)
+  settleTimer = setTimeout(() => {
+    settled.value = true
+  }, delay)
+}
+
+const onFrameLoad = () => settle(SETTLE_MS)
+
 onBeforeUnmount(() => {
   io?.disconnect()
   ro?.disconnect()
+  clearTimeout(settleTimer)
 })
 </script>
 
@@ -103,6 +136,7 @@ onBeforeUnmount(() => {
     <iframe
       v-if="ready && seen && scale"
       class="frame"
+      :class="{ settled }"
       :src="src"
       :style="frameStyle"
       :title="`${name}의 결과물 미리보기`"
@@ -111,6 +145,7 @@ onBeforeUnmount(() => {
       scrolling="no"
       loading="lazy"
       :allow="locationAllowed ? 'geolocation' : undefined"
+      @load="onFrameLoad"
     />
 
     <!--
@@ -118,7 +153,7 @@ onBeforeUnmount(() => {
       큰 이름을 박아 넣으면 그것도 하나의 그림이 되어, 낸 사람 것과 같은 무게로 읽힌다.
       빈 칸은 비어 있어야 옆의 진짜 화면이 산다.
     -->
-    <span v-if="ready && !seen" class="loading" aria-hidden="true" />
+    <span v-if="ready && !settled" class="loading" aria-hidden="true" />
   </div>
 </template>
 
@@ -162,18 +197,18 @@ onBeforeUnmount(() => {
   background: var(--page);
   /* --zoom 은 바깥(카드)에서 hover 때만 건드린다 */
   transform: translate(-50%, -50%) scale(calc(var(--s) * var(--zoom, 1)));
-  transition: transform 0.7s var(--ease);
-  /* 화면이 들어오는 순간 툭 튀지 않게 */
-  animation: settle 0.6s var(--ease) both;
+  /* 자리를 잡기 전까지는 덮개 아래에 둔다 — 아래 .settled 가 걷어 준다 */
+  opacity: 0;
+  transition:
+    transform 0.7s var(--ease),
+    opacity 0.6s var(--ease);
 }
 
-@keyframes settle {
-  from {
-    opacity: 0;
-  }
+.frame.settled {
+  opacity: 1;
 }
 
-/* 불러오는 동안 — 빛이 한 번 훑고 지나간다 */
+/* 덮개가 걷히기 전까지 — 빛이 한 번 훑고 지나간다 */
 .loading {
   position: absolute;
   inset: 0;

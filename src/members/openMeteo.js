@@ -27,6 +27,8 @@
  */
 import axios from 'axios'
 
+import { isPreview } from '../data/previewMode.js'
+
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
 const METNO_URL = 'https://api.met.no/weatherapi/locationforecast/2.0/compact'
 
@@ -357,21 +359,8 @@ const forecastFromMetNo = async (params) => {
 
 /* ── 바깥에서 쓰는 것 ───────────────────────────────────────────── */
 
-/**
- * Open-Meteo 의 /v1/forecast 를 대신 부른다.
- * 돌려주는 모양은 직접 부를 때와 같다.
- *
- * @param {object} params  latitude · longitude · current 등, Open-Meteo 의 질문 그대로
- * @returns {Promise<object|Array>}
- */
-export const fetchForecast = async (params) => {
-  const key = cacheKeyOf(params)
-
-  const cached = readEntry(key)
-  if (cached && Date.now() - cached.at < FRESH_MS) return cached.data
-
-  if (inFlight.has(key)) return inFlight.get(key)
-
+/** 새로 받아 저장한다. 겹치는 질문은 이 약속 하나를 함께 기다린다 */
+const refresh = (key, params, cached = null) => {
   const attempt = (async () => {
     try {
       const data = await fetchJson(FORECAST_URL, params)
@@ -392,6 +381,35 @@ export const fetchForecast = async (params) => {
 
   inFlight.set(key, attempt)
   return attempt
+}
+
+/**
+ * Open-Meteo 의 /v1/forecast 를 대신 부른다.
+ * 돌려주는 모양은 직접 부를 때와 같다.
+ *
+ * @param {object} params  latitude · longitude · current 등, Open-Meteo 의 질문 그대로
+ * @returns {Promise<object|Array>}
+ */
+export const fetchForecast = async (params) => {
+  const key = cacheKeyOf(params)
+  const cached = readEntry(key)
+
+  if (cached && Date.now() - cached.at < FRESH_MS) return cached.data
+
+  /*
+   * 표지 카드 안에서는 기다리게 두지 않는다.
+   * 받아 둔 것이 있으면 오래됐더라도 그것을 곧바로 준다 — 카드에 걸려야 하는
+   * 것은 결과물이지 "불러오는 중" 이 아니다. 새 값은 뒤에서 받아 두었다가
+   * 다음 번에 쓴다.
+   */
+  if (isPreview && cached) {
+    if (!inFlight.has(key)) void refresh(key, params).catch(() => {})
+    return cached.data
+  }
+
+  if (inFlight.has(key)) return inFlight.get(key)
+
+  return refresh(key, params, cached)
 }
 
 /**
