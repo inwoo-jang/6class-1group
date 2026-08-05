@@ -2,7 +2,7 @@ import axios from 'axios'
 import { weatherApi } from './axiosClient'
 import { getWeatherInfo as getOpenWeatherStatus } from './openWeatherCode'
 import { getWeatherInfo as getOpenMeteoStatus } from './openMeteoCode'
-import { fetchWithTimeout } from './fetchWithTimeout'
+import { fetchForecast as fetchSharedForecast } from '../../openMeteo.js'
 
 // OpenWeatherMap Current Weather API는 Open-Meteo와 달리 좌표를 한 번에 묶어 조회할 수 없어서
 // 도시마다 개별 요청을 axios.all로 병렬 실행한다.
@@ -38,16 +38,15 @@ async function fetchFromOpenMeteo(cities) {
   const longitude = cities.map((city) => city.lon).join(',')
   const fields =
     'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weathercode'
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=${fields}&timezone=Asia%2FSeoul`
 
-  const response = await fetchWithTimeout(url)
-  if (!response.ok) {
-    const error = new Error('날씨 데이터를 불러오지 못했습니다.')
-    error.status = response.status
-    throw error
-  }
-
-  const data = await response.json()
+  // 팀 공용 창구를 거친다 — 표지의 미리보기 여섯 개가 같은 값을 나눠 쓰고,
+  // Open-Meteo 가 하루 한도로 막히면 met.no 가 대신 답한다.
+  const data = await fetchSharedForecast({
+    latitude,
+    longitude,
+    current: fields,
+    timezone: 'Asia/Seoul',
+  })
   // Open-Meteo는 좌표가 1개일 때는 단일 객체를, 2개 이상일 때는 배열을 반환한다.
   const results = Array.isArray(data) ? data : [data]
 

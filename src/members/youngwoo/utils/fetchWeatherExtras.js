@@ -2,6 +2,7 @@ import { weatherApi } from './axiosClient'
 import { getWeatherInfo as getOpenWeatherStatus } from './openWeatherCode'
 import { getWeatherInfo as getOpenMeteoStatus } from './openMeteoCode'
 import { fetchWithTimeout } from './fetchWithTimeout'
+import { fetchForecast as fetchSharedForecast } from '../../openMeteo.js'
 
 // 상세 페이지 전용 확장 데이터(미세먼지, 5일 예보). 도시 목록 화면에는 안 붙이고
 // 상세 페이지에서 도시 1개 단위로만 호출해서 호출량 급증을 피한다.
@@ -94,10 +95,14 @@ async function fetchForecastFromOpenWeather({ lat, lon }) {
 }
 
 async function fetchForecastFromOpenMeteo({ lat, lon }) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul&forecast_days=5`
-  const response = await fetchWithTimeout(url)
-  if (!response.ok) throw new Error('예보 정보를 불러오지 못했습니다.')
-  const data = await response.json()
+  // 팀 공용 창구 — 받아 둔 값을 미리보기끼리 나눠 쓴다
+  const data = await fetchSharedForecast({
+    latitude: lat,
+    longitude: lon,
+    daily: 'weathercode,temperature_2m_max,temperature_2m_min',
+    timezone: 'Asia/Seoul',
+    forecast_days: 5,
+  })
   const {
     time = [],
     weathercode = [],

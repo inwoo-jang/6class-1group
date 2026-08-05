@@ -3,6 +3,7 @@ import { ref, computed, watch, watchEffect, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { link } from '../routes'
 import { fetchFestivalsByArea } from '@/members/gayeon/components/exercise/festivalService'
+import { fetchForecast } from '../../openMeteo.js'
 import axios from 'axios'
 import BaseDashboardCard from '@/members/gayeon/components/exercise/BaseDashboardCard.vue'
 import SearchBar from '@/members/gayeon/components/exercise/SearchBar.vue'
@@ -137,7 +138,80 @@ const mapWeatherId = (id) => {
 const OWM_BASE = 'https://api.openweathermap.org/data/2.5'
 const OWM_KEY = import.meta.env.VITE_OPENWEATHER_KEY
 
+/*
+ * 키가 없을 때 — 공개 배포본에는 OpenWeather 키를 넣지 않는다.
+ * 키가 필요 없는 팀 공용 창구(Open-Meteo · met.no)에서 같은 모양으로 받아 온다.
+ * WMO 코드를 이 화면이 쓰는 세 가지(맑음 · 구름 · 비)로 옮긴다.
+ */
+const mapWmoCode = (code) => {
+  if (code === 0 || code === 1) return '맑음'
+  if (code === 2 || code === 3 || code === 45 || code === 48) return '구름'
+  return '비'
+}
+
+/*
+ * 시간별 예보는 따로 묻는다.
+ * 지금 날씨는 Open-Meteo 가 막혀도 met.no 가 대신 답해 주지만, 시간별까지
+ * 흉내 내지는 못한다. 한 번에 물으면 지금 날씨까지 같이 못 받는다.
+ * 그래서 갈라 두고, 시간별은 실패해도 그냥 비워 둔다 — 카드의 기온은 살아 있다.
+ */
+const fetchHourlyWithoutKey = async (city) => {
+  try {
+    const data = await fetchForecast({
+      latitude: city.lat,
+      longitude: city.lon,
+      hourly: 'temperature_2m,weather_code',
+      timezone: 'Asia/Seoul',
+      forecast_days: 2,
+    })
+
+    const times = data.hourly?.time ?? []
+    // 지금 이후의 것만, OpenWeather 경로와 같이 여덟 칸
+    const from = Math.max(
+      0,
+      times.findIndex((time) => new Date(time).getTime() >= Date.now()),
+    )
+
+    return times.slice(from, from + 8).map((time, index) => ({
+      // OpenWeather 는 '2026-08-04 15:00:00' 모양으로 준다 — 화면이 그걸 읽는다
+      time: `${time.replace('T', ' ')}:00`,
+      temp: Math.round(data.hourly.temperature_2m[from + index] ?? 0),
+      status: mapWmoCode(data.hourly.weather_code[from + index]),
+    }))
+  } catch {
+    return []
+  }
+}
+
+const fetchCityWithoutKey = async (city) => {
+  const [data, hourly] = await Promise.all([
+    fetchForecast({
+      latitude: city.lat,
+      longitude: city.lon,
+      current: 'temperature_2m,relative_humidity_2m,weather_code',
+      timezone: 'Asia/Seoul',
+    }),
+    fetchHourlyWithoutKey(city),
+  ])
+
+  const now = data.current ?? {}
+
+  return {
+    id: city.id,
+    name: city.name,
+    region: city.region,
+    lat: city.lat,
+    lon: city.lon,
+    temp: Math.round(now.temperature_2m ?? 0),
+    humidity: Math.round(now.relative_humidity_2m ?? 0),
+    status: mapWmoCode(now.weather_code),
+    hourly,
+  }
+}
+
 const fetchCityWeather = async (city) => {
+  if (!OWM_KEY) return fetchCityWithoutKey(city)
+
   const [currentRes, forecastRes] = await Promise.all([
     axios.get(`${OWM_BASE}/weather`, {
       params: { lat: city.lat, lon: city.lon, appid: OWM_KEY, units: 'metric', lang: 'kr' },
