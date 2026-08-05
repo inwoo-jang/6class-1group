@@ -1,5 +1,7 @@
 import http from 'node:http'
 import { createRecord, records, resetRecords, users } from './data/stores.js'
+import { handleDongyeolRoutes } from './dongyeol/index.js'
+import { handleGayeonRoutes } from './gayeon/index.js'
 import { readJson, sendJson } from './utils/http.js'
 import { createToken, verifyToken } from './utils/token.js'
 
@@ -49,6 +51,15 @@ const server = http.createServer(async (request, response) => {
   const match = url.pathname.match(recordPath)
 
   try {
+    /*
+     * 팀원의 API 는 자기 이름표 아래에 따로 산다 — /api/dongyeol, /api/gayeon.
+     * 자기 주소가 아니면 false 를 돌려주므로, 아래 운세 API 는 그대로 흐른다.
+     * 맨 앞에 두는 이유는 /health · /reset 처럼 이름이 겹치는 자리를
+     * 각자의 이름표 아래에서 먼저 갈라 놓기 위해서다.
+     */
+    if (await handleDongyeolRoutes(request, response, url)) return
+    if (await handleGayeonRoutes(request, response, url)) return
+
     if (request.method === 'GET' && url.pathname === '/api/health') {
       return sendJson(response, 200, { status: 'ok', recordCount: records.length })
     }
