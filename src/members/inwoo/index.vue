@@ -299,14 +299,14 @@ const logout = () => {
   align-items: center;
   padding: 2px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  background: color-mix(in srgb, #fcfeff 84%, transparent);
   backdrop-filter: blur(10px);
 }
 
 .nav a {
   padding: 8px 16px;
   border-radius: 999px;
-  color: var(--muted);
+  color: #67788d;
   font-size: 13.5px;
   font-weight: 600;
   text-decoration: none;
@@ -316,7 +316,7 @@ const logout = () => {
 }
 
 .nav a:hover {
-  color: var(--ink);
+  color: #1b2a3d;
 }
 
 .nav a.on {
@@ -376,21 +376,21 @@ const logout = () => {
  */
 .nav a.sign,
 .nav a.sign.on {
-  border-color: rgb(255 255 255 / 0.55);
-  background: rgb(255 255 255 / 0.18);
-  color: #ffffff;
-  text-shadow: 0 1px 3px rgb(20 30 45 / 0.35);
+  border: 1px solid #bdd3e1;
+  background: #fcfeff;
+  color: #3d8098;
+  text-shadow: none;
 }
 
 /* 지금 로그인 화면에 있다는 표시는 옅은 배경으로만 준다 */
 .nav a.sign.on {
-  background: rgb(255 255 255 / 0.3);
+  background: #e6f0f6;
 }
 
 .nav a.sign:hover {
-  border-color: rgb(255 255 255 / 0.8);
-  background: rgb(255 255 255 / 0.3);
-  color: #ffffff;
+  border-color: #6494b3;
+  background: #e6f0f6;
+  color: #2d6278;
 }
 
 @media (max-width: 620px) {
