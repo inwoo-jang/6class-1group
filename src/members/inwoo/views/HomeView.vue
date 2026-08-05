@@ -195,7 +195,7 @@ const summaryIcon = computed(() => {
 /** 아래 네 칸 — 이 서비스가 하는 일 전부 */
 const menus = [
   { to: 'weather', icon: 'sun-cloud', tone: 'sky', title: '날씨', desc: '오늘의 날씨와 전국 현황' },
-  { to: 'tarot', icon: 'moon-star', tone: 'plum', title: '운세', desc: '오늘의 운세와 타로 보기' },
+  { to: 'tarot', icon: 'moon-star', tone: 'plum', title: '운세', desc: '타로로 오늘의 운세 보기' },
   { to: 'tests', icon: 'checklist', tone: 'leaf', title: '테스트', desc: '오늘의 심리테스트' },
 ]
 

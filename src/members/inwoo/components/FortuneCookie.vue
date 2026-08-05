@@ -163,20 +163,50 @@ onBeforeUnmount(() => {
  * -120% → 120% 는 화면 밖까지 크게 쓸어 과했고, -45% → 45% 는 쿠키를
  * 다 지나가기 전에 멈췄다. 쿠키 폭을 한 번 건너가는 정도로 맞췄다.
  */
+/*
+ * 쓸고 지나가는 빛줄기.
+ *
+ * 예전에는 투명도가 0 → 1 로만 올라가서, 줄기가 쿠키를 벗어나 배경 위에
+ * 올라선 순간에도 가장 진했다. 그게 눈에 걸린다.
+ * 그래서 두 겹으로 흐리게 한다.
+ *   ① mask  — 줄기 자신의 좌우 끝을 먹인다 (자리로 흐리게)
+ *   ② 애니메이션 — 양 끝에서 투명도를 0 으로 (시간으로 흐리게)
+ * 결과적으로 쿠키 위를 지날 때만 밝고, 배경으로 넘어가기 전에 사라진다.
+ */
 .shine {
   position: absolute;
   inset: 8% 4% 18%;
   background: linear-gradient(112deg, transparent 40%, rgb(255 255 255 / 0.38) 50%, transparent 60%);
-  transform: translateX(-78%);
+  transform: translateX(-70%);
   opacity: 0;
-  transition:
-    transform 0.55s ease,
-    opacity 0.55s ease;
+  mask-image: linear-gradient(90deg, transparent, #000 28%, #000 72%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 28%, #000 72%, transparent);
 }
 
+/*
+ * 이름을 shine-sweep 으로 따로 둔다.
+ * 아래 .label 이 쓰는 sweep 과 이름이 같으면, 같은 파일 안에서 나중에 적힌
+ * 쪽이 이겨 이 규칙이 통째로 없어진 것처럼 동작한다 (투명도가 안 먹었다).
+ */
 .shell:hover .shine {
-  transform: translateX(78%);
-  opacity: 1;
+  animation: shine-sweep 0.75s ease-out;
+}
+
+@keyframes shine-sweep {
+  0% {
+    opacity: 0;
+    transform: translateX(-70%);
+  }
+
+  30%,
+  62% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(70%);
+  }
 }
 
 /*
@@ -423,7 +453,8 @@ onBeforeUnmount(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .shell img,
-  .label::after {
+  .label::after,
+  .shell:hover .shine {
     animation: none;
   }
 
