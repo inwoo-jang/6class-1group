@@ -320,8 +320,8 @@ const logout = () => {
 }
 
 .nav a.on {
-  color: var(--on-accent);
-  background: var(--accent);
+  color: #ffffff;
+  background: #6494b3;
 }
 
 .url {
@@ -376,20 +376,21 @@ const logout = () => {
  */
 .nav a.sign,
 .nav a.sign.on {
-  border: 1px solid var(--accent-line);
-  background: var(--surface);
-  color: var(--accent);
+  border-color: rgb(255 255 255 / 0.55);
+  background: rgb(255 255 255 / 0.18);
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgb(20 30 45 / 0.35);
 }
 
 /* 지금 로그인 화면에 있다는 표시는 옅은 배경으로만 준다 */
 .nav a.sign.on {
-  background: var(--accent-tint);
+  background: rgb(255 255 255 / 0.3);
 }
 
 .nav a.sign:hover {
-  border-color: var(--accent);
-  background: var(--accent-tint);
-  color: var(--accent);
+  border-color: rgb(255 255 255 / 0.8);
+  background: rgb(255 255 255 / 0.3);
+  color: #ffffff;
 }
 
 @media (max-width: 620px) {
