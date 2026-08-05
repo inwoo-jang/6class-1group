@@ -2,11 +2,13 @@
 import { onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { CopyFilled, DownloadOutlined } from '@ant-design/icons-vue'
 import BaseDashboardCard from '../components/BaseDashboardCard.vue'
 import UiIcon from '../components/UiIcon.vue'
 import { RECORD_KINDS, useRecordStore } from '../stores/recordStore'
 import { useAuthStore } from '../stores/authStore'
 import { findTest } from '../data/personalityTests'
+import { downloadBlob, drawLottoCard, drawResultCard } from '../utils/resultCard'
 import { link } from '../routes'
 
 /**
@@ -26,42 +28,16 @@ const { displayName } = storeToRefs(auth)
 const store = useRecordStore()
 const { records, isLoading, errorMessage, filterKind, count, kindCounts } = storeToRefs(store)
 
+/** 종류 배지 앞에 붙는 그림 */
+const kindEmoji = (record) => {
+  const kind = record.kind ?? 'tarot'
+  return kind === 'test' ? '🧪' : kind === 'game' ? '🎲' : '🔮'
+}
+
 /** 테스트 기록은 저장된 id 로 지금 번들의 그림을 다시 찾아 쓴다 */
 const artOf = (record) => {
   if (record.kind !== 'test' || !record.meta) return ''
   return findTest(record.meta.testId)?.results?.[record.meta.resultId]?.image ?? ''
-}
-
-/* ── 메모 수정 ──────────────────────────────────────────────────── */
-
-/**
- * 어느 기록을 고치는 중인지 id 하나로 기억한다.
- * 기록마다 편집 상태를 따로 두면 목록을 다시 받을 때 서로 어긋난다.
- */
-const editingId = ref(0)
-const memoDraft = ref('')
-const isSavingMemo = ref(false)
-
-const startEdit = (record) => {
-  editingId.value = record.id
-  memoDraft.value = record.memo ?? ''
-}
-
-const cancelEdit = () => {
-  editingId.value = 0
-  memoDraft.value = ''
-}
-
-const saveMemo = async (record) => {
-  isSavingMemo.value = true
-  const ok = await store.editMemo(record.id, memoDraft.value.trim())
-  isSavingMemo.value = false
-  if (!ok) {
-    ElMessage.error(store.errorMessage)
-    return
-  }
-  ElMessage.success({ message: '메모를 저장했습니다.', duration: 1600 })
-  cancelEdit()
 }
 
 /* ── 삭제 ───────────────────────────────────────────────────────── */
@@ -72,7 +48,13 @@ const confirmRemove = async (record) => {
     await ElMessageBox.confirm(
       `${formatDate(record.createdAt)}의 ${record.type} 기록을 지울까요?`,
       '기록 삭제',
-      { confirmButtonText: '삭제', cancelButtonText: '그대로 두기', type: 'warning' },
+      {
+        confirmButtonText: '삭제',
+        cancelButtonText: '그대로 두기',
+        type: 'warning',
+        // 이 이름을 단 대화창만 아래 스타일이 잡는다 (다른 화면에는 안 번진다)
+        customClass: 'inwoo-confirm',
+      },
     )
   } catch {
     // 취소를 누르면 여기로 온다 — 아무 일도 하지 않는다
@@ -84,12 +66,13 @@ const confirmRemove = async (record) => {
     ElMessage.error(store.errorMessage)
     return
   }
-  if (editingId.value === record.id) cancelEdit()
   ElMessage.success({ message: '기록을 지웠습니다.', duration: 1600 })
 }
 
 /* ── 표시용 ─────────────────────────────────────────────────────── */
+/* 며칠 전 기록인지 헷갈리지 않게 연도까지 적는다 */
 const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
+  year: 'numeric',
   month: 'long',
   day: 'numeric',
   hour: '2-digit',
@@ -97,6 +80,73 @@ const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
 })
 
 const formatDate = (iso) => dateFormatter.format(new Date(iso))
+
+/* ── 한 건씩 가져가기 ──────────────────────────────────────────
+ *
+ * 기록은 남겨 두는 것으로 끝나지 않는다. 친구에게 보내거나 어딘가 붙여
+ * 두고 싶을 때가 있어서, 카드마다 '글자로 복사'와 '그림으로 저장'을 둔다.
+ * 그림은 각 화면에서 쓰던 카드 그리기를 그대로 다시 쓴다.
+ */
+const copyOne = async (record) => {
+  const lines = [`[${record.type}] ${formatDate(record.createdAt)}`, record.reading]
+  if (record.cards?.length) lines.splice(1, 0, cardLine(record.cards))
+  if (isLotto(record)) lines.splice(1, 0, record.meta.result)
+
+  try {
+    await navigator.clipboard.writeText(lines.join('\n'))
+    ElMessage.success({ message: '기록을 복사했어요.', duration: 1400 })
+  } catch {
+    ElMessage.warning('브라우저가 복사를 막았습니다. 길게 눌러 직접 복사해 주세요.')
+  }
+}
+
+/** 이 기록을 그림으로 만들 수 있는지 (테스트 · 로또만 그릴 그림이 있다) */
+const canDraw = (record) =>
+  isLotto(record) || (record.kind === 'test' && Boolean(findTest(record.meta?.testId)))
+
+const savingId = ref(0)
+
+const saveImage = async (record) => {
+  if (savingId.value) return
+  savingId.value = record.id
+  try {
+    let blob = null
+
+    if (isLotto(record)) {
+      const sets = record.meta.lines.map((numbers, i) => ({
+        letter: String.fromCharCode(65 + i),
+        numbers,
+        bonus: record.meta.bonus?.[i],
+      }))
+      blob = await drawLottoCard({ sets })
+    } else if (record.kind === 'test') {
+      const test = findTest(record.meta.testId)
+      const result = test?.results?.[record.meta.resultId]
+      if (result) blob = await drawResultCard({ test, result })
+    }
+
+    if (!blob) throw new Error('no blob')
+    downloadBlob(blob, `${record.type}_${formatDate(record.createdAt)}.png`)
+    ElMessage.success({ message: '그림으로 저장했어요!', duration: 1500 })
+  } catch {
+    ElMessage.error('그림을 만들지 못했어요.')
+  } finally {
+    savingId.value = 0
+  }
+}
+
+/** 로또 기록인지 — 번호가 줄 단위로 담겨 있어야 공으로 그릴 수 있다 */
+const isLotto = (record) =>
+  record.kind === 'game' && record.meta?.gameId === 'lotto' && Array.isArray(record.meta.lines)
+
+/** 공 색 — 게임 화면과 같은 구간을 쓴다 */
+const lottoTone = (n) => {
+  if (n <= 10) return '#f5bf35'
+  if (n <= 20) return '#3d8fdd'
+  if (n <= 30) return '#e8564c'
+  if (n <= 40) return '#4b525c'
+  return '#3fa870'
+}
 
 /** 카드 세 장을 "정/역"까지 한 줄로 */
 const cardLine = (cards) =>
@@ -112,7 +162,7 @@ onMounted(() => store.load())
         <div>
           <h3>My</h3>
           <p class="lead">
-            <b>{{ displayName }}</b>님이 남긴 운세와 테스트 <b>{{ count }}</b>건
+            <b>{{ displayName }}</b>님이 남긴 기록 <b>{{ count }}</b>건
           </p>
         </div>
 
@@ -164,7 +214,7 @@ onMounted(() => store.load())
           <div class="row">
             <!-- 세부 종류는 여기서 보여 준다 (오늘의 운세 · 영혼 동물 테스트 …) -->
             <span class="type">
-              <span aria-hidden="true">{{ (record.kind ?? 'tarot') === 'test' ? '🧪' : '🔮' }}</span>
+              <span aria-hidden="true">{{ kindEmoji(record) }}</span>
               {{ record.type }}
             </span>
             <time :datetime="record.createdAt">{{ formatDate(record.createdAt) }}</time>
@@ -180,36 +230,62 @@ onMounted(() => store.load())
             </span>
           </div>
 
-          <!-- ② 운세 — 뽑은 카드 -->
-          <p v-else-if="record.cards?.length" class="cards">{{ cardLine(record.cards) }}</p>
-
-          <p class="reading">{{ record.reading }}</p>
-
-          <!-- 메모: 보는 중 / 고치는 중 두 모습 -->
-          <div v-if="editingId === record.id" class="memo-edit">
-            <el-input
-              v-model="memoDraft"
-              type="textarea"
-              :rows="3"
-              maxlength="200"
-              show-word-limit
-              placeholder="이 기록에 남기고 싶은 말"
-            />
-            <div class="memo-actions">
-              <el-button size="small" :loading="isSavingMemo" type="primary" @click="saveMemo(record)">
-                저장
-              </el-button>
-              <el-button size="small" :disabled="isSavingMemo" @click="cancelEdit">취소</el-button>
-            </div>
+          <!-- ② 로또 — 화면에서 본 그대로 색 공으로 -->
+          <div v-else-if="isLotto(record)" class="lotto-result">
+            <span v-for="(line, li) in record.meta.lines" :key="li" class="lotto-line">
+              <!-- 몇 번째 세트인지는 번호 옆에 붙인다. 따로 한 줄을 쓰지 않는다 -->
+              <span class="letter">{{ String.fromCharCode(65 + li) }}</span>
+              <span
+                v-for="n in line"
+                :key="n"
+                class="ball"
+                :style="{ background: lottoTone(n) }"
+              >
+                {{ n }}
+              </span>
+              <template v-if="record.meta.bonus?.[li]">
+                <span class="plus" aria-hidden="true">+</span>
+                <span class="ball bonus" :style="{ background: lottoTone(record.meta.bonus[li]) }">
+                  {{ record.meta.bonus[li] }}
+                </span>
+              </template>
+            </span>
           </div>
 
-          <p v-else class="memo" :class="{ blank: !record.memo }">
-            {{ record.memo || '메모 없음' }}
+          <!-- ③ 그 밖의 게임 — 무엇이 나왔는지 -->
+          <p v-else-if="record.kind === 'game' && record.meta" class="game-result">
+            <b>{{ record.meta.result }}</b>
+            <small v-if="record.meta.items?.length">{{ record.meta.items.length }}개 중에서</small>
+
+            <!-- 그때 돌린 항목 그대로 다시 돌려 볼 수 있게 -->
+            <RouterLink
+              v-if="record.meta.gameId === 'roulette' && record.meta.items?.length"
+              class="replay"
+              :to="link('roulette', {}, { items: JSON.stringify(record.meta.items) })"
+            >
+              이 목록으로 다시 →
+            </RouterLink>
           </p>
 
+          <!-- ④ 운세 — 뽑은 카드 -->
+          <p v-else-if="record.cards?.length" class="cards">{{ cardLine(record.cards) }}</p>
+
+          <!-- 로또는 공이 곧 내용이라 설명 줄을 따로 두지 않는다 -->
+          <p v-if="!isLotto(record)" class="reading">{{ record.reading }}</p>
+
           <div class="actions">
-            <button v-if="editingId !== record.id" type="button" @click="startEdit(record)">
-              {{ record.memo ? '메모 고치기' : '메모 남기기' }}
+            <button type="button" class="icon" title="글자로 복사" @click="copyOne(record)">
+              <CopyFilled />
+            </button>
+            <button
+              v-if="canDraw(record)"
+              type="button"
+              class="icon"
+              title="그림으로 저장"
+              :disabled="savingId === record.id"
+              @click="saveImage(record)"
+            >
+              <DownloadOutlined />
             </button>
             <button type="button" class="danger" @click="confirmRemove(record)">삭제</button>
           </div>
@@ -307,9 +383,103 @@ h3 {
   background: var(--panel-inner, var(--surface));
 }
 
-/* 테스트 기록은 왼쪽 선 색으로 한눈에 구분된다 */
+/* 왼쪽 선 색으로 종류가 한눈에 구분된다 */
 .list li.test {
   border-left-color: var(--slate);
+}
+
+.list li.game {
+  border-left-color: var(--signal);
+}
+
+.list li.game .type {
+  background: var(--signal-tint);
+  color: var(--signal);
+}
+
+/* 게임은 무엇이 나왔는지가 전부라 크게 한 줄 */
+/* ── 로또 기록 ── */
+.lotto-result {
+  display: grid;
+  gap: 6px;
+}
+
+.lotto-result .letter {
+  width: 14px;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lotto-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+
+.lotto-result .ball {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 800;
+  box-shadow:
+    inset 0 -2px 4px rgb(0 0 0 / 0.18),
+    inset 0 2px 4px rgb(255 255 255 / 0.3);
+}
+
+.lotto-result .ball.bonus {
+  width: 26px;
+  height: 26px;
+  font-size: 11.5px;
+  opacity: 0.92;
+}
+
+.lotto-result .plus {
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.game-result {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: baseline;
+  margin: 0;
+}
+
+.game-result b {
+  color: var(--ink);
+  /* 로또처럼 번호가 길게 이어지는 결과도 있어 줄바꿈을 허용한다 */
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.game-result small {
+  color: var(--faint);
+  font-size: 11.5px;
+}
+
+.replay {
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: var(--accent-tint);
+  color: var(--accent);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.replay:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .row {
@@ -398,31 +568,6 @@ time {
   white-space: pre-wrap;
 }
 
-.memo {
-  margin: 0;
-  padding: 8px 10px;
-  border-left: 2px solid var(--accent-line);
-  color: var(--ink-soft);
-  font-size: 12.5px;
-  line-height: 1.6;
-  white-space: pre-wrap;
-}
-
-.memo.blank {
-  border-left-color: var(--line);
-  color: var(--faint);
-}
-
-.memo-edit {
-  display: grid;
-  gap: 8px;
-}
-
-.memo-actions {
-  display: flex;
-  gap: 6px;
-}
-
 .actions {
   display: flex;
   gap: 6px;
@@ -439,6 +584,31 @@ time {
   font: inherit;
   font-size: 12px;
   font-weight: 600;
+}
+
+/*
+ * 아이콘 버튼은 테두리를 두르지 않는다.
+ * 옆의 '삭제' 처럼 알약을 씌우면 아이콘 셋이 나란히 서서 시끄럽다.
+ * 그림 하나만 놓고, 눌리는 자리는 넉넉히 잡아 둔다.
+ */
+.actions button.icon {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  color: var(--faint);
+  font-size: 14px;
+}
+
+.actions button.icon:hover {
+  color: var(--ink-soft);
+}
+
+.actions button.icon:disabled {
+  cursor: default;
+  opacity: 0.5;
 }
 
 .actions button:hover {

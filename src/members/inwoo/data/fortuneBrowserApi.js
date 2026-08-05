@@ -102,11 +102,8 @@ const readAuthorization = (config) =>
  */
 const validateRecord = (input) => {
   const kind = input.kind ?? 'tarot'
-  if (!['tarot', 'test'].includes(kind)) return '기록 종류가 올바르지 않습니다.'
+  if (!['tarot', 'test', 'game'].includes(kind)) return '기록 종류가 올바르지 않습니다.'
   if (typeof input.reading !== 'string' || !input.reading.trim()) return '기록할 내용이 필요합니다.'
-  if (typeof input.memo !== 'undefined' && typeof input.memo !== 'string') {
-    return '메모 형식이 올바르지 않습니다.'
-  }
 
   if (kind === 'tarot') {
     if (!TYPES.includes(input.type)) return '운세 종류를 선택해 주세요.'
@@ -114,10 +111,19 @@ const validateRecord = (input) => {
     return ''
   }
 
-  if (typeof input.type !== 'string' || !input.type.trim()) return '테스트 이름이 필요합니다.'
-  if (!input.meta || typeof input.meta !== 'object') return '테스트 결과 정보가 필요합니다.'
-  if (typeof input.meta.testId !== 'string' || typeof input.meta.resultId !== 'string') {
-    return '테스트 결과 정보가 올바르지 않습니다.'
+  if (typeof input.type !== 'string' || !input.type.trim()) return '이름이 필요합니다.'
+  if (!input.meta || typeof input.meta !== 'object') return '결과 정보가 필요합니다.'
+
+  if (kind === 'test') {
+    if (typeof input.meta.testId !== 'string' || typeof input.meta.resultId !== 'string') {
+      return '테스트 결과 정보가 올바르지 않습니다.'
+    }
+    return ''
+  }
+
+  // 게임 — 무슨 게임에서 무엇이 나왔는지만 확인한다
+  if (typeof input.meta.gameId !== 'string' || typeof input.meta.result !== 'string') {
+    return '게임 결과 정보가 올바르지 않습니다.'
   }
   return ''
 }
@@ -125,6 +131,7 @@ const validateRecord = (input) => {
 /* ── 경로 처리 ──────────────────────────────────────────────────── */
 
 const RECORD_PATH = /^\/api\/fortune-records\/(\d+)$/
+const ADMIN_RECORD_PATH = /^\/api\/admin\/records\/(\d+)$/
 
 /**
  * mock-api/server.js 와 같은 순서로 같은 판단을 한다.
@@ -150,8 +157,47 @@ export const handleLocally = (config) => {
   }
 
   const user = userFromToken(readAuthorization(config))
-  if (path.startsWith('/api/fortune-records') || path.startsWith('/api/auth/me')) {
+  if (
+    path.startsWith('/api/fortune-records') ||
+    path.startsWith('/api/auth/me') ||
+    path.startsWith('/api/admin')
+  ) {
     if (!user) return fail(config, 401, '로그인이 필요합니다.')
+  }
+
+  /*
+   * 관리자 전용 — mock-api/server.js 와 같은 규칙이어야 한다.
+   *
+   * 화면에서 메뉴를 감추는 것은 안내일 뿐이고, 실제로 막는 곳은 여기다.
+   * 서버가 없을 때도 STUDENT 는 여기서 막힌다.
+   */
+  if (path.startsWith('/api/admin')) {
+    if (user.role !== 'ADMIN') return fail(config, 403, '관리자만 볼 수 있습니다.')
+
+    if (method === 'GET' && path === '/api/admin/records') {
+      const all = readAll().map((record) => ({
+        ...record,
+        owner: publicUser(USERS.find((item) => item.id === record.userId) ?? {}),
+      }))
+      return Promise.resolve(ok(config, 200, [...all].reverse()))
+    }
+
+    const adminMatch = path.match(ADMIN_RECORD_PATH)
+    if (method === 'DELETE' && adminMatch) {
+      const records = readAll()
+      const index = records.findIndex((item) => item.id === Number(adminMatch[1]))
+      if (index === -1) return fail(config, 404, '기록을 찾을 수 없습니다.')
+      const [deleted] = records.splice(index, 1)
+      writeAll(records)
+      return Promise.resolve(ok(config, 200, deleted))
+    }
+
+    if (method === 'POST' && path === '/api/admin/reset') {
+      writeAll([])
+      return Promise.resolve(ok(config, 200, { message: '모든 기록을 지웠습니다.' }))
+    }
+
+    return fail(config, 404, '존재하지 않는 API 경로입니다.')
   }
 
   if (method === 'GET' && path === '/api/auth/me') {
@@ -182,26 +228,11 @@ export const handleLocally = (config) => {
       cards: input.cards ?? [],
       reading: input.reading,
       meta: input.meta ?? null,
-      memo: input.memo ?? '',
       createdAt: now,
       updatedAt: now,
     }
     writeAll([...records, record])
     return Promise.resolve(ok(config, 201, record))
-  }
-
-  if (method === 'PATCH' && match) {
-    const records = readAll()
-    const record = records.find((item) => item.id === Number(match[1]) && item.userId === user.id)
-    if (!record) return fail(config, 404, '기록을 찾을 수 없습니다.')
-
-    const { memo } = readBody(config)
-    if (typeof memo !== 'string') return fail(config, 400, '메모를 입력해 주세요.')
-
-    record.memo = memo
-    record.updatedAt = new Date().toISOString()
-    writeAll(records)
-    return Promise.resolve(ok(config, 200, record))
   }
 
   if (method === 'DELETE' && match) {

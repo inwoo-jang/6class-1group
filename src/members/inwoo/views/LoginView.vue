@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { ElMessage } from 'element-plus'
@@ -23,8 +23,17 @@ const router = useRouter()
 const auth = useAuthStore()
 const { isLoading, errorMessage, isLoggedIn } = storeToRefs(auth)
 
-const email = ref('')
-const password = ref('')
+/*
+ * 입력값은 reactive 객체 하나로 묶는다.
+ *
+ * ref 두 개로 두면 .value 를 매번 붙여야 하고, "이 화면의 입력값"이 무엇인지
+ * 한눈에 안 보인다. 서로 늘 같이 움직이는 값이라 한 덩어리로 두는 편이 낫다.
+ * (교안 CH05 — ref 는 값 하나, reactive 는 객체 한 덩어리)
+ */
+const form = reactive({
+  email: '',
+  password: '',
+})
 
 /** 서버가 안 떠 있으면 무엇을 눌러도 실패한다. 그 사실을 먼저 알린다 */
 const serverState = ref('checking') // checking | up | down
@@ -35,12 +44,12 @@ const SAMPLE_ACCOUNTS = [
 ]
 
 const fillAccount = (account) => {
-  email.value = account.email
-  password.value = account.password
+  form.email = account.email
+  form.password = account.password
 }
 
 const canSubmit = computed(
-  () => Boolean(email.value.trim()) && Boolean(password.value) && !isLoading.value,
+  () => Boolean(form.email.trim()) && Boolean(form.password) && !isLoading.value,
 )
 
 /**
@@ -58,7 +67,7 @@ const goNext = () => {
 
 const submit = async () => {
   if (!canSubmit.value) return
-  const ok = await auth.login(email.value.trim(), password.value)
+  const ok = await auth.login(form.email.trim(), form.password)
   if (!ok) return
   ElMessage.success({ message: `${auth.displayName}님, 환영합니다.`, duration: 1800 })
   goNext()
@@ -98,7 +107,7 @@ onMounted(async () => {
         <label>
           <span>이메일</span>
           <el-input
-            v-model="email"
+            v-model="form.email"
             type="email"
             size="large"
             placeholder="student@skala.com"
@@ -109,7 +118,7 @@ onMounted(async () => {
         <label>
           <span>비밀번호</span>
           <el-input
-            v-model="password"
+            v-model="form.password"
             type="password"
             size="large"
             placeholder="비밀번호"

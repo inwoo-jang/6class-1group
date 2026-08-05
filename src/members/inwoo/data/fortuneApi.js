@@ -153,12 +153,6 @@ export const createRecord = async (payload) => {
   return data
 }
 
-/** 메모만 고친다 (PATCH — 보낸 필드만 바뀐다) */
-export const updateMemo = async (id, memo) => {
-  const { data } = await api.patch(`/api/fortune-records/${id}`, { memo })
-  return data
-}
-
 /** 기록 지우기 → 지워진 기록을 돌려준다 */
 export const removeRecord = async (id) => {
   const { data } = await api.delete(`/api/fortune-records/${id}`)
@@ -168,5 +162,29 @@ export const removeRecord = async (id) => {
 /** 서버가 떠 있는지 — 로그인 화면에서 안내를 띄우는 데 쓴다 */
 export const checkHealth = async () => {
   const { data } = await api.get('/api/health')
+  return data
+}
+
+/* ── 관리자 전용 ────────────────────────────────────────────────
+ *
+ * 아래 셋은 토큰의 role 이 ADMIN 일 때만 통한다.
+ * 화면에서 메뉴를 감추는 것과 별개로, 막는 일은 서버(와 브라우저 폴백)가 한다.
+ */
+
+/** 모든 사용자의 기록 — 각 건에 owner 가 함께 담겨 온다 */
+export const fetchAllRecords = async () => {
+  const { data } = await api.get('/api/admin/records')
+  return data
+}
+
+/** 누구 것이든 지운다 */
+export const removeAnyRecord = async (id) => {
+  const { data } = await api.delete(`/api/admin/records/${id}`)
+  return data
+}
+
+/** 기록을 전부 비운다 (Mock 데이터 초기화) */
+export const resetAllRecords = async () => {
+  const { data } = await api.post('/api/admin/reset')
   return data
 }

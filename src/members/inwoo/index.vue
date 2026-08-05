@@ -30,11 +30,19 @@ const isWeather = computed(() => route.name === 'inwoo.weather' || route.name ==
 const isTarot = computed(() => route.name === 'inwoo.tarot')
 /** 테스트 진행 화면에서도 '테스트' 탭이 눌린 채로 남아야 한다 */
 const isTests = computed(() => route.name === 'inwoo.tests' || route.name === 'inwoo.test')
+const isGames = computed(() => ['games', 'roulette', 'lotto'].includes(String(route.name ?? '').split('.').pop()))
+const isAdminPage = computed(() => String(route.name ?? '').endsWith('.admin'))
 const isRecords = computed(() => route.name === 'inwoo.records')
 const isLogin = computed(() => route.name === 'inwoo.login')
 const isHome = computed(
   () =>
-    !isWeather.value && !isTarot.value && !isTests.value && !isRecords.value && !isLogin.value,
+    !isWeather.value &&
+    !isTarot.value &&
+    !isTests.value &&
+    !isGames.value &&
+    !isAdminPage.value &&
+    !isRecords.value &&
+    !isLogin.value,
 )
 
 /**
@@ -43,7 +51,7 @@ const isHome = computed(
  * 눌러 보고 나서야 로그인이 필요하다는 걸 알게 된다.
  */
 const auth = useAuthStore()
-const { isLoggedIn, displayName } = storeToRefs(auth)
+const { isLoggedIn, isAdmin, displayName } = storeToRefs(auth)
 const recordStore = useRecordStore()
 
 // 새로고침해도 로그인이 유지되도록, 저장해 둔 토큰이 살아 있는지 한 번 확인한다
@@ -71,11 +79,19 @@ const logout = () => {
         <RouterLink :to="link('weather')" :class="{ on: isWeather }">날씨</RouterLink>
         <RouterLink :to="link('tarot')" :class="{ on: isTarot }">운세</RouterLink>
         <RouterLink :to="link('tests')" :class="{ on: isTests }">테스트</RouterLink>
+        <RouterLink :to="link('games')" :class="{ on: isGames }">게임</RouterLink>
         <RouterLink :to="link('records')" :class="{ on: isRecords }">My</RouterLink>
+
+        <!-- 관리자에게만 보인다. 화면을 막는 일은 가드와 서버가 따로 한다 -->
+        <RouterLink v-if="isAdmin" :to="link('admin')" class="admin-tab" :class="{ on: isAdminPage }">
+          관리
+        </RouterLink>
 
         <code class="url">{{ route.path }}</code>
 
         <!-- 로그인했으면 이름과 로그아웃, 아니면 로그인 링크 -->
+        <span v-if="isAdmin" class="admin-badge">ADMIN MODE</span>
+
         <span v-if="isLoggedIn" class="who">
           <b>{{ displayName }}</b>
           <button type="button" @click="logout">로그아웃</button>
@@ -370,6 +386,27 @@ const logout = () => {
  * 강조색은 섹션 탭이 쓰고 있으므로 여기는 청회색으로 물러난다.
  * (개인 저장소의 main.css .tint-cta 와 같은 값 — 여기서는 내 영역에만 심는다)
  */
+/* 관리자 표시 — 지금 어떤 권한으로 보고 있는지 */
+.admin-badge {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--danger, #c0554b) 82%, transparent);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.nav a.admin-tab {
+  color: var(--danger, #c0554b);
+}
+
+.nav a.admin-tab.on {
+  background: var(--danger, #c0554b);
+  color: #fff;
+}
+
 .nav a.sign {
   padding: 8px 18px;
   border: 1px solid color-mix(in srgb, var(--slate) 26%, transparent);
@@ -436,5 +473,88 @@ const logout = () => {
   .who b {
     display: none;
   }
+}
+</style>
+
+<!--
+  대화창은 <body> 로 옮겨져 그려지므로 scoped 로는 닿지 않는다.
+  전역 블록을 쓰되 .inwoo-confirm 으로 범위를 좁혀 남의 화면에는 번지지 않게 한다.
+-->
+<style>
+/* ──────────────────────────────────────────────────────────────
+ * 확인 대화창 (ElMessageBox)
+ *
+ * 대화창은 <body> 끝으로 옮겨져 그려지므로 화면 안쪽 스타일이 닿지 않는다.
+ * 그래서 여기 한 곳에 두되, customClass 로 이 프로젝트 대화창만 고른다 —
+ * 갤러리처럼 여러 사람 화면이 한 앱에 있을 때 남의 것까지 바뀌지 않도록.
+ * 색은 전부 테마 토큰을 쓴다. 테마를 바꾸면 대화창도 같이 따라온다.
+ * ────────────────────────────────────────────────────────────── */
+.el-overlay:has(.inwoo-confirm) {
+  background: rgb(24 30 38 / 0.34);
+  backdrop-filter: blur(3px);
+}
+
+.el-message-box.inwoo-confirm {
+  padding: 22px 22px 18px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 20px 50px rgb(30 36 46 / 0.22);
+}
+
+.inwoo-confirm .el-message-box__header {
+  padding: 0 0 10px;
+}
+
+.inwoo-confirm .el-message-box__title {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.inwoo-confirm .el-message-box__content {
+  padding: 0;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+.inwoo-confirm .el-message-box__status.el-icon {
+  color: var(--signal);
+}
+
+.inwoo-confirm .el-message-box__btns {
+  padding: 18px 0 0;
+  gap: 6px;
+}
+
+.inwoo-confirm .el-button {
+  height: 34px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.inwoo-confirm .el-button:hover {
+  border-color: var(--line-strong);
+  color: var(--ink-soft);
+}
+
+/* 되돌릴 수 없는 쪽이라 확인 버튼만 채운다 */
+.inwoo-confirm .el-button--primary {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
+}
+
+.inwoo-confirm .el-button--primary:hover {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 84%, #000);
+  color: #fff;
 }
 </style>

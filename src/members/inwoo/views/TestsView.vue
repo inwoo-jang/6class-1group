@@ -220,4 +220,16 @@ h3 {
     transition: none;
   }
 }
+
+/*
+ * 좁은 화면 — 두 장씩.
+ * auto-fit(minmax 230px) 은 390px 화면에서 한 줄에 한 장만 놓아, 카드가
+ * 화면을 통째로 먹고 목록이 한없이 길어진다. 여기서는 두 칸으로 못박는다.
+ */
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
 </style>

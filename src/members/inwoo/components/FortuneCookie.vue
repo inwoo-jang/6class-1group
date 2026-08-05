@@ -1,8 +1,10 @@
 <script setup>
 import { onBeforeUnmount, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import closedCookie from '../assets/cookie/closed.png'
 import openCookie from '../assets/cookie/open.png'
 import { anotherMessage, messageOfToday } from '../data/fortuneCookie'
+import { downloadBlob, drawFortuneCard } from '../utils/resultCard'
 
 /**
  * 포춘쿠키 — 눌러서 한 줄 받기
@@ -16,14 +18,21 @@ import { anotherMessage, messageOfToday } from '../data/fortuneCookie'
  * 맞춰 두었다 — 사진을 바꾸면 이 값도 같이 고쳐야 한다.
  */
 const isOpen = ref(false)
+// 첫 문구만 날짜로 정한다 — 열기 전 화면에서도 뭔가 정해져 있도록
 const message = ref(messageOfToday())
 
 /** 갈라지는 연출이 끝난 뒤에 종이를 보여 주려고 한 박자 늦춘다 */
 const isCracked = ref(false)
 let crackTimer = 0
 
+/*
+ * 열 때마다 다른 한 줄.
+ *
+ * 처음에는 날짜로 정해 하루 종일 같은 문구를 주었는데, 다시 눌러도 똑같아서
+ * 두 번째부터는 열어 볼 맛이 없었다. 누를 때마다 새로 뽑되 방금 본 것만 피한다.
+ */
 const open = () => {
-  message.value = messageOfToday()
+  message.value = anotherMessage(message.value)
   isOpen.value = true
 }
 
@@ -39,6 +48,26 @@ const again = () => {
     message.value = anotherMessage(message.value)
     isCracked.value = true
   }, 220)
+}
+
+/* 받은 한 줄을 그림 한 장으로 — 저장해 두거나 보내기 좋게 */
+const isSaving = ref(false)
+
+const saveImage = async () => {
+  if (isSaving.value) return
+  isSaving.value = true
+  try {
+    // 열린 사진에는 영어 문구가 인쇄되어 있어 그대로 쓰면 두 문장이 겹친다.
+    // 카드에서는 닫힌 쿠키를 놓고 우리 한 줄만 크게 적는다.
+    const blob = await drawFortuneCard({ message: message.value, image: closedCookie })
+    if (!blob) throw new Error('no blob')
+    downloadBlob(blob, `오늘의포춘_${new Date().toLocaleDateString('ko-KR')}.png`)
+    ElMessage.success({ message: '그림으로 저장했어요!', duration: 1600 })
+  } catch {
+    ElMessage.error('그림을 만들지 못했어요. 잠시 뒤 다시 눌러 주세요.')
+  } finally {
+    isSaving.value = false
+  }
 }
 
 /**
@@ -109,6 +138,9 @@ onBeforeUnmount(() => {
 
             <div class="acts">
               <button type="button" class="ghost" @click="again">하나 더</button>
+              <button type="button" class="ghost" :disabled="isSaving" @click="saveImage">
+                {{ isSaving ? '만드는 중…' : '그림으로 저장' }}
+              </button>
               <button type="button" class="solid" @click="close">잘 받았어요</button>
             </div>
           </div>
@@ -124,12 +156,13 @@ onBeforeUnmount(() => {
   position: relative;
   display: block;
   width: 100%;
+  margin: 0 auto;
   padding: 0;
   border: 0;
   background: transparent;
   cursor: pointer;
   /* 아래 안내가 겹쳐 앉을 자리를 비워 둔다 */
-  padding-bottom: 18px;
+  padding-bottom: 26px;
   /* 살짝 기울여 두면 눌러 보고 싶은 물건처럼 보인다 */
   transform: rotate(-3deg);
   transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -468,6 +501,15 @@ onBeforeUnmount(() => {
 
   .pop-enter-active .sheet {
     animation: none;
+  }
+}
+
+/* 좁은 화면 — 라벨이 쿠키 칸을 넘어가면 히어로 밖으로 삐져나온다 */
+@media (max-width: 720px) {
+  .label {
+    padding: 5px 8px;
+    font-size: 10.5px;
+    letter-spacing: -0.03em;
   }
 }
 </style>
