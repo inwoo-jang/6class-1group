@@ -1,1 +1,0 @@
-var e=`/6class-1group/assets/storm-D6tvNT1N.jpg`;export{e as default};
