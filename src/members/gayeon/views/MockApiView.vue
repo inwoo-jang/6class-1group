@@ -1,11 +1,11 @@
 <script setup>
-import '@/assets/mockapi.css'
+import '@/members/gayeon/assets/mockapi.css'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
-import { systemApi } from '@/api/systemApi.js'
-import PostManager from '@/components/mockapi/PostManager.vue'
-import ProductManager from '@/components/mockapi/ProductManager.vue'
-import StatusBanner from '@/components/mockapi/StatusBanner.vue'
+import { systemApi } from '@/members/gayeon/api/systemApi.js'
+import PostManager from '@/members/gayeon/components/mockapi/PostManager.vue'
+import ProductManager from '@/members/gayeon/components/mockapi/ProductManager.vue'
+import StatusBanner from '@/members/gayeon/components/mockapi/StatusBanner.vue'
 
 const activeTab = ref('products')
 const health = ref(null)

@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { useConfigStore } from '@/stores/configStore'
+import { useConfigStore } from '@/members/gayeon/stores/configStore'
 
 const props = defineProps({
   cityItem: {

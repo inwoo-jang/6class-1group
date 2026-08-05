@@ -121,12 +121,15 @@ const tempRangeClass = computed(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* 줄높이를 물려받으면 16px 이라 18px 글자와 이모지의 위아래가 잘린다 */
+  line-height: 1.4;
 }
 .city-status {
   font-size: 13px;
   color: var(--color-text);
   opacity: 0.75;
   margin-top: 2px;
+  line-height: 1.4;
 }
 .temp-value {
   font-size: 28px;

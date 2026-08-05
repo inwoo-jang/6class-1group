@@ -1,4 +1,4 @@
-:root {
+.gayeon-app {
   color: #182433;
   background: #f3f6f8;
   font-family: Pretendard, 'Noto Sans KR', 'Apple SD Gothic Neo', Inter, system-ui, sans-serif;
@@ -6,42 +6,42 @@
   text-rendering: optimizeLegibility;
 }
 
-* {
+.gayeon-app * {
   box-sizing: border-box;
 }
 
-html {
+.gayeon-app {
   min-width: 320px;
   background: #f3f6f8;
 }
 
-body {
+.gayeon-app {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
 }
 
-button,
-input,
-select,
-textarea {
+.gayeon-app button,
+.gayeon-app input,
+.gayeon-app select,
+.gayeon-app textarea {
   font: inherit;
 }
 
-button {
+.gayeon-app button {
   cursor: pointer;
 }
 
-button:disabled {
+.gayeon-app button:disabled {
   cursor: wait;
   opacity: 0.6;
 }
 
-.app-shell {
+.gayeon-app .app-shell {
   min-height: 100vh;
 }
 
-.hero {
+.gayeon-app .hero {
   padding: 38px max(24px, calc((100vw - 1280px) / 2));
   color: #f9fffd;
   background:
@@ -50,7 +50,7 @@ button:disabled {
   border-bottom: 1px solid rgb(255 255 255 / 10%);
 }
 
-.hero__eyebrow {
+.gayeon-app .hero__eyebrow {
   margin-bottom: 14px;
   color: #80e0c0;
   font-size: 0.75rem;
@@ -58,14 +58,14 @@ button:disabled {
   letter-spacing: 0.2em;
 }
 
-.hero__body {
+.gayeon-app .hero__body {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 32px;
 }
 
-.hero h1 {
+.gayeon-app .hero h1 {
   margin: 0;
   font-size: clamp(2.15rem, 5vw, 4.5rem);
   font-weight: 850;
@@ -73,7 +73,7 @@ button:disabled {
   line-height: 1;
 }
 
-.hero p {
+.gayeon-app .hero p {
   max-width: 680px;
   margin: 18px 0 0;
   color: #c9ddd8;
@@ -81,7 +81,7 @@ button:disabled {
   line-height: 1.7;
 }
 
-.server-card {
+.gayeon-app .server-card {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -94,7 +94,7 @@ button:disabled {
   backdrop-filter: blur(8px);
 }
 
-.server-card__indicator {
+.gayeon-app .server-card__indicator {
   width: 10px;
   height: 10px;
   background: #ff8c82;
@@ -102,33 +102,33 @@ button:disabled {
   box-shadow: 0 0 0 5px rgb(255 140 130 / 13%);
 }
 
-.server-card__indicator--online {
+.gayeon-app .server-card__indicator--online {
   background: #68e2b2;
   box-shadow: 0 0 0 5px rgb(104 226 178 / 13%);
 }
 
-.server-card strong,
-.server-card small {
+.gayeon-app .server-card strong,
+.gayeon-app .server-card small {
   display: block;
 }
 
-.server-card strong {
+.gayeon-app .server-card strong {
   font-size: 0.9rem;
 }
 
-.server-card small {
+.gayeon-app .server-card small {
   margin-top: 3px;
   color: #b5cec7;
   font-size: 0.75rem;
 }
 
-.workspace {
+.gayeon-app .workspace {
   width: min(1280px, calc(100% - 48px));
   margin: 0 auto;
   padding: 26px 0 48px;
 }
 
-.toolbar {
+.gayeon-app .toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -136,7 +136,7 @@ button:disabled {
   margin-bottom: 20px;
 }
 
-.tabs {
+.gayeon-app .tabs {
   display: inline-flex;
   gap: 5px;
   padding: 5px;
@@ -144,7 +144,7 @@ button:disabled {
   border-radius: 13px;
 }
 
-.tabs__button {
+.gayeon-app .tabs__button {
   padding: 10px 18px;
   color: #59706b;
   background: transparent;
@@ -153,24 +153,24 @@ button:disabled {
   font-weight: 750;
 }
 
-.tabs__button:hover {
+.gayeon-app .tabs__button:hover {
   color: #174a40;
 }
 
-.tabs__button--active {
+.gayeon-app .tabs__button--active {
   color: #173d37;
   background: #fff;
   box-shadow: 0 2px 8px rgb(29 67 59 / 10%);
 }
 
-.manager-grid {
+.gayeon-app .manager-grid {
   display: grid;
   grid-template-columns: minmax(290px, 0.7fr) minmax(0, 1.7fr);
   align-items: start;
   gap: 20px;
 }
 
-.panel {
+.gayeon-app .panel {
   overflow: hidden;
   background: #fff;
   border: 1px solid #dfe8e5;
@@ -178,18 +178,18 @@ button:disabled {
   box-shadow: 0 10px 32px rgb(27 66 58 / 6%);
 }
 
-.panel--form {
+.gayeon-app .panel--form {
   position: sticky;
   top: 20px;
   padding: 24px;
 }
 
-.panel--content {
+.gayeon-app .panel--content {
   min-width: 0;
   padding: 24px;
 }
 
-.panel__heading {
+.gayeon-app .panel__heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -197,20 +197,20 @@ button:disabled {
   margin-bottom: 22px;
 }
 
-.panel__heading > div {
+.gayeon-app .panel__heading > div {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.panel__heading h2 {
+.gayeon-app .panel__heading h2 {
   margin: 0;
   color: #193c36;
   font-size: 1.2rem;
   letter-spacing: -0.025em;
 }
 
-.method-badge {
+.gayeon-app .method-badge {
   display: inline-flex;
   align-items: center;
   min-height: 24px;
@@ -224,19 +224,19 @@ button:disabled {
   letter-spacing: 0.04em;
 }
 
-.method-badge--get {
+.gayeon-app .method-badge--get {
   background: #248b75;
 }
 
-.method-badge--post {
+.gayeon-app .method-badge--post {
   background: #3476bb;
 }
 
-.method-badge--patch {
+.gayeon-app .method-badge--patch {
   background: #8a5bb4;
 }
 
-.count-pill {
+.gayeon-app .count-pill {
   padding: 5px 10px;
   color: #49645e;
   background: #edf3f1;
@@ -245,35 +245,35 @@ button:disabled {
   font-weight: 750;
 }
 
-.data-form {
+.gayeon-app .data-form {
   display: grid;
   gap: 16px;
 }
 
-.field-row {
+.gayeon-app .field-row {
   display: grid;
   grid-template-columns: 1fr 0.75fr;
   gap: 12px;
 }
 
-.field {
+.gayeon-app .field {
   display: grid;
   gap: 7px;
 }
 
-.field > span {
+.gayeon-app .field > span {
   color: #405a55;
   font-size: 0.8rem;
   font-weight: 750;
 }
 
-.field b {
+.gayeon-app .field b {
   color: #d65454;
 }
 
-input,
-select,
-textarea {
+.gayeon-app input,
+.gayeon-app select,
+.gayeon-app textarea {
   width: 100%;
   color: #183b35;
   background: #fbfdfc;
@@ -285,31 +285,31 @@ textarea {
     box-shadow 150ms ease;
 }
 
-input,
-select {
+.gayeon-app input,
+.gayeon-app select {
   min-height: 43px;
   padding: 9px 11px;
 }
 
-textarea {
+.gayeon-app textarea {
   min-height: 105px;
   padding: 11px;
   line-height: 1.6;
   resize: vertical;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+.gayeon-app input:focus,
+.gayeon-app select:focus,
+.gayeon-app textarea:focus {
   border-color: #339f86;
   box-shadow: 0 0 0 3px rgb(51 159 134 / 12%);
 }
 
-::placeholder {
+.gayeon-app ::placeholder {
   color: #91a29e;
 }
 
-.button {
+.gayeon-app .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -328,58 +328,58 @@ textarea:focus {
     border-color 120ms ease;
 }
 
-.button:hover:not(:disabled) {
+.gayeon-app .button:hover:not(:disabled) {
   transform: translateY(-1px);
 }
 
-.button--primary {
+.gayeon-app .button--primary {
   color: #fff;
   background: #187a68;
   border-color: #187a68;
 }
 
-.button--primary:hover:not(:disabled) {
+.gayeon-app .button--primary:hover:not(:disabled) {
   background: #126957;
   border-color: #126957;
 }
 
-.button--ghost {
+.gayeon-app .button--ghost {
   background: transparent;
 }
 
-.hero .button--ghost {
+.gayeon-app .hero .button--ghost {
   color: #e5f8f2;
   border-color: rgb(255 255 255 / 20%);
 }
 
-.hero .button--ghost:hover:not(:disabled) {
+.gayeon-app .hero .button--ghost:hover:not(:disabled) {
   background: rgb(255 255 255 / 8%);
 }
 
-.button--danger-soft {
+.gayeon-app .button--danger-soft {
   color: #a34848;
   background: #fff5f4;
   border-color: #f0ceca;
 }
 
-.button--danger-soft:hover:not(:disabled) {
+.gayeon-app .button--danger-soft:hover:not(:disabled) {
   color: #8d3434;
   background: #ffecea;
 }
 
-.button--small {
+.gayeon-app .button--small {
   min-height: 32px;
   padding: 6px 10px;
   font-size: 0.74rem;
 }
 
-.button--wide {
+.gayeon-app .button--wide {
   width: 100%;
   min-height: 46px;
   margin-top: 2px;
 }
 
-.text-button {
+.gayeon-app .text-button {
   padding: 4px 0;
   color: #6b7e79;
   background: transparent;
@@ -389,7 +389,7 @@ textarea:focus {
   text-underline-offset: 3px;
 }
 
-.filter-bar {
+.gayeon-app .filter-bar {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) 110px auto auto auto;
   align-items: center;
@@ -401,11 +401,11 @@ textarea:focus {
   border-radius: 12px;
 }
 
-.filter-bar--posts {
+.gayeon-app .filter-bar--posts {
   grid-template-columns: minmax(220px, 1fr) auto auto;
 }
 
-.check-field {
+.gayeon-app .check-field {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -416,20 +416,20 @@ textarea:focus {
   white-space: nowrap;
 }
 
-.check-field input {
+.gayeon-app .check-field input {
   width: 16px;
   min-height: 16px;
   accent-color: #187a68;
 }
 
-.product-list,
-.post-list {
+.gayeon-app .product-list,
+.gayeon-app .post-list {
   display: grid;
   gap: 11px;
 }
 
-.product-card,
-.post-card {
+.gayeon-app .product-card,
+.gayeon-app .post-card {
   padding: 17px;
   border: 1px solid #e2e9e7;
   border-radius: 13px;
@@ -438,43 +438,43 @@ textarea:focus {
     box-shadow 150ms ease;
 }
 
-.product-card:hover,
-.post-card:hover {
+.gayeon-app .product-card:hover,
+.gayeon-app .post-card:hover {
   border-color: #bcd4cd;
   box-shadow: 0 7px 18px rgb(25 87 73 / 7%);
 }
 
-.product-card__top,
-.product-card__bottom {
+.gayeon-app .product-card__top,
+.gayeon-app .product-card__bottom {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
 }
 
-.product-card__top > div {
+.gayeon-app .product-card__top > div {
   display: flex;
   align-items: center;
   gap: 9px;
   min-width: 0;
 }
 
-.product-card h3,
-.post-card h3 {
+.gayeon-app .product-card h3,
+.gayeon-app .post-card h3 {
   margin: 0;
   color: #1d3c36;
   font-size: 1rem;
   letter-spacing: -0.02em;
 }
 
-.product-card__top > strong {
+.gayeon-app .product-card__top > strong {
   color: #166957;
   font-size: 0.92rem;
   white-space: nowrap;
 }
 
-.product-card > p,
-.post-card > p {
+.gayeon-app .product-card > p,
+.gayeon-app .post-card > p {
   margin: 12px 0 15px;
   color: #647772;
   font-size: 0.85rem;
@@ -482,7 +482,7 @@ textarea:focus {
   white-space: pre-wrap;
 }
 
-.category-tag {
+.gayeon-app .category-tag {
   flex: 0 0 auto;
   padding: 4px 7px;
   color: #60706c;
@@ -492,26 +492,26 @@ textarea:focus {
   font-weight: 750;
 }
 
-.stock {
+.gayeon-app .stock {
   color: #26725f;
   font-size: 0.76rem;
   font-weight: 750;
 }
 
-.stock--empty {
+.gayeon-app .stock--empty {
   color: #bd5151;
 }
 
-.card-actions {
+.gayeon-app .card-actions {
   display: flex;
   gap: 6px;
 }
 
-.card-actions--end {
+.gayeon-app .card-actions--end {
   justify-content: flex-end;
 }
 
-.post-card__meta {
+.gayeon-app .post-card__meta {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -520,13 +520,13 @@ textarea:focus {
   font-size: 0.72rem;
 }
 
-.post-card__meta span + span::before,
-.post-card__meta time::before {
+.gayeon-app .post-card__meta span + span::before,
+.gayeon-app .post-card__meta time::before {
   margin-right: 8px;
   content: '·';
 }
 
-.empty-state {
+.gayeon-app .empty-state {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -539,7 +539,7 @@ textarea:focus {
   font-size: 0.88rem;
 }
 
-.spinner {
+.gayeon-app .spinner {
   width: 18px;
   height: 18px;
   border: 2px solid #c8d8d4;
@@ -548,7 +548,7 @@ textarea:focus {
   animation: spin 700ms linear infinite;
 }
 
-.status-banner {
+.gayeon-app .status-banner {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -562,26 +562,26 @@ textarea:focus {
   font-weight: 650;
 }
 
-.status-banner--success {
+.gayeon-app .status-banner--success {
   color: #21604f;
   background: #ebf8f3;
   border-color: #c4e5d8;
 }
 
-.status-banner--error {
+.gayeon-app .status-banner--error {
   color: #903e3e;
   background: #fff1f0;
   border-color: #efcfcc;
 }
 
-.status-banner__dot {
+.gayeon-app .status-banner__dot {
   width: 8px;
   height: 8px;
   background: currentColor;
   border-radius: 50%;
 }
 
-.page-footer {
+.gayeon-app .page-footer {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -591,27 +591,27 @@ textarea:focus {
   font-size: 0.78rem;
 }
 
-.page-footer code {
+.gayeon-app .page-footer code {
   padding: 4px 7px;
   color: #315c52;
   background: #e8efed;
   border-radius: 5px;
 }
 
-.notice-enter-active,
-.notice-leave-active {
+.gayeon-app .notice-enter-active,
+.gayeon-app .notice-leave-active {
   transition:
     opacity 180ms ease,
     transform 180ms ease;
 }
 
-.notice-enter-from,
-.notice-leave-to {
+.gayeon-app .notice-enter-from,
+.gayeon-app .notice-leave-to {
   opacity: 0;
   transform: translateY(-5px);
 }
 
-.sr-only {
+.gayeon-app .sr-only {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -630,101 +630,101 @@ textarea:focus {
 }
 
 @media (max-width: 960px) {
-  .hero__body {
+  .gayeon-app .hero__body {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .server-card {
+  .gayeon-app .server-card {
     min-width: 0;
     width: min(100%, 430px);
   }
 
-  .manager-grid {
+  .gayeon-app .manager-grid {
     grid-template-columns: 1fr;
   }
 
-  .panel--form {
+  .gayeon-app .panel--form {
     position: static;
   }
 
-  .filter-bar {
+  .gayeon-app .filter-bar {
     grid-template-columns: 1fr 120px auto;
   }
 
-  .filter-bar .button {
+  .gayeon-app .filter-bar .button {
     width: 100%;
   }
 }
 
 @media (max-width: 640px) {
-  .hero {
+  .gayeon-app .hero {
     padding: 28px 18px;
   }
 
-  .hero p {
+  .gayeon-app .hero p {
     font-size: 0.93rem;
   }
 
-  .server-card {
+  .gayeon-app .server-card {
     grid-template-columns: auto 1fr;
   }
 
-  .server-card .button {
+  .gayeon-app .server-card .button {
     grid-column: 1 / -1;
   }
 
-  .workspace {
+  .gayeon-app .workspace {
     width: min(100% - 28px, 1280px);
     padding-top: 16px;
   }
 
-  .toolbar {
+  .gayeon-app .toolbar {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .tabs {
+  .gayeon-app .tabs {
     display: grid;
     grid-template-columns: 1fr 1fr;
   }
 
-  .panel--form,
-  .panel--content {
+  .gayeon-app .panel--form,
+.gayeon-app .panel--content {
     padding: 18px;
   }
 
-  .field-row,
-  .filter-bar,
-  .filter-bar--posts {
+  .gayeon-app .field-row,
+.gayeon-app .filter-bar,
+.gayeon-app .filter-bar--posts {
     grid-template-columns: 1fr;
   }
 
-  .check-field {
+  .gayeon-app .check-field {
     min-height: 38px;
   }
 
-  .product-card__top,
-  .product-card__bottom {
+  .gayeon-app .product-card__top,
+.gayeon-app .product-card__bottom {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .product-card__bottom,
-  .card-actions {
+  .gayeon-app .product-card__bottom,
+.gayeon-app .card-actions {
     width: 100%;
   }
 
-  .card-actions .button {
+  .gayeon-app .card-actions .button {
     flex: 1;
   }
 
-  .post-card__meta {
+  .gayeon-app .post-card__meta {
     align-items: flex-start;
     flex-wrap: wrap;
   }
 
-  .page-footer {
+  .gayeon-app .page-footer {
     flex-wrap: wrap;
   }
 }

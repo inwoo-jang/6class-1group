@@ -1,5 +1,5 @@
 <script setup>
-import SlotDefaultChild from '@/components/practices/component/SlotDefaultChild.vue'
+import SlotDefaultChild from '@/members/gayeon/components/practices/component/SlotDefaultChild.vue'
 </script>
 
 <template>

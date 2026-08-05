@@ -1,5 +1,6 @@
 <script setup>
 import { RouterLink } from 'vue-router'
+import { link } from '../routes'
 </script>
 
 <template>
@@ -7,7 +8,7 @@ import { RouterLink } from 'vue-router'
     <i class="fa-solid fa-compass not-found-icon"></i>
     <h1 class="not-found-title">페이지를 찾을 수 없어요</h1>
     <p class="not-found-desc">주소를 다시 확인하시거나, 아래 버튼으로 돌아가주세요.</p>
-    <RouterLink to="/" class="back-btn">
+    <RouterLink :to="link('home')" class="back-btn">
       <i class="fa-solid fa-house"></i> 대시보드 홈으로 이동
     </RouterLink>
   </div>

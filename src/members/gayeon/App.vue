@@ -1,7 +1,7 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
-import FeedbackWidget from '@/components/exercise/FeedbackWidget.vue'
-import { useAuthStore } from '@/stores/authStore'
+import FeedbackWidget from '@/members/gayeon/components/exercise/FeedbackWidget.vue'
+import { useAuthStore } from '@/members/gayeon/stores/authStore'
 import { ElMessage } from 'element-plus'
 
 const authStore = useAuthStore()

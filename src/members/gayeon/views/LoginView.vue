@@ -1,8 +1,9 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
+import { link } from '../routes'
 import { ElMessage } from 'element-plus'
-import { useAuthStore } from '@/stores/authStore'
+import { useAuthStore } from '@/members/gayeon/stores/authStore'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -19,7 +20,7 @@ const handleLogin = () => {
     if (!valid) return
     authStore.login(form.userId)
     ElMessage.success(`${form.userId}님, 환영해요! 🎉`)
-    router.push('/')
+    router.push(link('home'))
   })
 }
 </script>
@@ -52,7 +53,7 @@ const handleLogin = () => {
 
     <p class="signup-hint">
       아직 계정이 없으신가요?
-      <RouterLink to="/signup" class="signup-link">회원가입</RouterLink>
+      <RouterLink :to="link('signup')" class="signup-link">회원가입</RouterLink>
     </p>
   </div>
 </template>

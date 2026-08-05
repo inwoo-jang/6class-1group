@@ -1,15 +1,16 @@
 <script setup>
 import { ref, computed, watch, watchEffect, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchFestivalsByArea } from '@/components/exercise/festivalService'
+import { link } from '../routes'
+import { fetchFestivalsByArea } from '@/members/gayeon/components/exercise/festivalService'
 import axios from 'axios'
-import BaseDashboardCard from '@/components/exercise/BaseDashboardCard.vue'
-import SearchBar from '@/components/exercise/SearchBar.vue'
-import FilterBar from '@/components/exercise/FilterBar.vue'
-import RegionFilter from '@/components/exercise/RegionFilter.vue'
-import SortSelect from '@/components/exercise/SortSelect.vue'
-import WeatherCard from '@/components/exercise/WeatherCard.vue'
-import UnitToggler from '@/components/exercise/UnitToggler.vue'
+import BaseDashboardCard from '@/members/gayeon/components/exercise/BaseDashboardCard.vue'
+import SearchBar from '@/members/gayeon/components/exercise/SearchBar.vue'
+import FilterBar from '@/members/gayeon/components/exercise/FilterBar.vue'
+import RegionFilter from '@/members/gayeon/components/exercise/RegionFilter.vue'
+import SortSelect from '@/members/gayeon/components/exercise/SortSelect.vue'
+import WeatherCard from '@/members/gayeon/components/exercise/WeatherCard.vue'
+import UnitToggler from '@/members/gayeon/components/exercise/UnitToggler.vue'
 
 const router = useRouter()
 
@@ -310,7 +311,7 @@ const selectCity = (city) => {
 
 // 상세보기 → Programmatic Navigation
 const showDetail = (city) => {
-  router.push('/weather/' + city.id)
+  router.push(link('weatherDetail', { cityId: city.id }))
 }
 </script>
 

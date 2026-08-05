@@ -30,9 +30,9 @@ export const MEMBERS = [
   {
     slug: 'gayeon',
     name: '가연',
-    title: '',
-    role: '아직 소개가 없습니다',
-    stack: [],
+    title: '날씨 다이어리',
+    role: '전국 날씨와 지역 축제를, Mock API 실습실까지 함께',
+    stack: ['Vue Router', 'Pinia', 'Axios', 'Element Plus'],
     accent: '#2f5d8a',
     live: '',
   },

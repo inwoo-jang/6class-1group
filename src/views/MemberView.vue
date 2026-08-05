@@ -116,8 +116,11 @@ watch(
  * (앞의 셋은 fixed 의 기준을 이 요소로 바꿔 버리고, overflow 는 sticky 를 죽인다)
  * 그래서 배치에 전혀 영향이 없는 box-shadow 와 배경만 쓴다.
  *
- * 그림자는 네 겹이다 — 테두리 선, 닿는 그늘, 가까운 그늘, 멀리 퍼지는 그늘.
+ * 그림자는 네 겹이다 — 테두리 선, 닿는 그늘, 몸통 그늘, 멀리 퍼지는 그늘.
  * 한 겹만 쓰면 스티커처럼 납작해 보인다.
+ *
+ * 빛은 오른쪽 위에서 온다고 본다. 그래서 그늘은 전부 왼쪽 아래(-x, +y)로만 간다.
+ * 인덱스 화면의 슬라이드와 같은 방향이라, 두 화면을 오가도 광원이 바뀌지 않는다.
  *
  * 모서리는 일부러 둥글리지 않는다. 결과물마다 배경을 그리는 방식이 달라서
  * (어떤 것은 안에서 잘라 내고 어떤 것은 그대로 그린다) 둥글리면 사람마다
@@ -128,9 +131,9 @@ watch(
   background: var(--card);
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--fg) 8%, transparent),
-    0 2px 4px color-mix(in srgb, var(--fg) 6%, transparent),
-    0 14px 30px -10px color-mix(in srgb, var(--fg) 18%, transparent),
-    0 40px 80px -30px color-mix(in srgb, var(--fg) 24%, transparent);
+    -4px 5px 5px -3px rgb(0 0 0 / 16%),
+    -20px 26px 14px -10px rgb(0 0 0 / 18%),
+    -40px 52px 60px -24px rgb(0 0 0 / 24%);
 }
 
 /* 어두운 화면에서는 그늘이 안 보이므로, 위쪽에 옅은 빛을 얹어 경계를 만든다 */
@@ -139,8 +142,9 @@ watch(
     box-shadow:
       inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent),
       0 0 0 1px color-mix(in srgb, #fff 6%, transparent),
-      0 14px 30px -12px #0009,
-      0 40px 80px -30px #000c;
+      -4px 5px 6px -3px rgb(0 0 0 / 50%),
+      -20px 26px 15px -10px rgb(0 0 0 / 55%),
+      -42px 54px 64px -24px rgb(0 0 0 / 70%);
   }
 }
 

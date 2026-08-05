@@ -1,10 +1,11 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
-import { useConfigStore } from '@/stores/configStore'
+import { link } from '../routes'
+import { useConfigStore } from '@/members/gayeon/stores/configStore'
 import axios from 'axios'
-import { fetchFestivalsByArea, sortFestivals } from '@/components/exercise/festivalService'
-import FestivalList from '@/components/exercise/FestivalList.vue'
+import { fetchFestivalsByArea, sortFestivals } from '@/members/gayeon/components/exercise/festivalService'
+import FestivalList from '@/members/gayeon/components/exercise/FestivalList.vue'
 
 const route = useRoute()
 
@@ -214,7 +215,7 @@ const formatHour = (isoString, index) => {
 
   <div v-else-if="!city" class="status-box error">
     <i class="fa-solid fa-triangle-exclamation"></i> 해당 도시 정보를 찾을 수 없어요.
-    <RouterLink to="/" class="back-btn">대시보드 홈으로 이동</RouterLink>
+    <RouterLink :to="link('home')" class="back-btn">대시보드 홈으로 이동</RouterLink>
   </div>
 
   <template v-else>
@@ -264,7 +265,7 @@ const formatHour = (isoString, index) => {
       />
     </section>
 
-    <RouterLink to="/" class="back-btn">
+    <RouterLink :to="link('home')" class="back-btn">
       <i class="fa-solid fa-arrow-left"></i> 대시보드 홈으로 이동
     </RouterLink>
   </template>

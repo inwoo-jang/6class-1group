@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, reactive, ref, watch } from 'vue'
 
-import { productApi } from '@/api/productApi.js'
+import { productApi } from '@/members/gayeon/api/productApi.js'
 
 const props = defineProps({
   // App.vue에서 데이터 초기화가 일어나면 값이 증가합니다.

@@ -1,7 +1,8 @@
 <script setup>
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/authStore'
+import { link } from '../routes'
+import { useAuthStore } from '@/members/gayeon/stores/authStore'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -84,7 +85,7 @@ const goBack = () => {
 }
 
 const goHome = () => {
-  router.push('/')
+  router.push(link('home'))
 }
 </script>
 

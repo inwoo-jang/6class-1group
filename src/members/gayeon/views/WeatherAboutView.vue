@@ -1,5 +1,6 @@
 <script setup>
 import { RouterLink } from 'vue-router'
+import { link } from '../routes'
 </script>
 
 <template>
@@ -17,7 +18,7 @@ import { RouterLink } from 'vue-router'
       <li><i class="fa-solid fa-check"></i> 도시별 시간대별 상세 예보 페이지</li>
     </ul>
 
-    <RouterLink to="/" class="back-btn">
+    <RouterLink :to="link('home')" class="back-btn">
       <i class="fa-solid fa-house"></i> 대시보드 홈으로 이동
     </RouterLink>
   </div>

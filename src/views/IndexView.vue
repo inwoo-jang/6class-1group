@@ -372,60 +372,71 @@ onBeforeUnmount(() => {
 /*
  * 판(카드 배경)을 없앴다. 회색 위에 회색이 얹히면 경계선만 남는다.
  *
- * 그림자는 평소에도 떠 있다. 빛이 왼쪽 위에서 온다고 보고
- * 오른쪽 아래 한쪽으로만 떨군다 — 사방으로 퍼뜨리면 붕 뜬 것처럼 보인다.
- * 두 겹인 이유는, 가까운 그늘이 두께를 만들고 먼 그늘이 높이를 만들기 때문이다.
+ * 그림자는 평소에도 떠 있다. 빛이 오른쪽 위에서 온다고 보고
+ * 왼쪽 아래 한쪽으로만, 조금 길게 떨군다 — 사방으로 퍼뜨리면 붕 뜬 것처럼 보인다.
+ *
+ * 세 겹인 이유가 각각 있다.
+ *   1) 맞닿은 그늘 — 흐림이 거의 없어 종이의 두께를 만든다
+ *   2) 몸통 그늘  — 흐림을 일부러 적게 줘서 "네모의 그림자"라는 게 눈에 보인다
+ *   3) 먼 그늘    — 넓게 번져 높이를 만든다
+ * 가운데 겹의 흐림을 키우면 그냥 얼룩이 되고, 네모라는 사실이 사라진다.
  */
 .frame-cell :deep(.poster) {
   height: var(--h);
   aspect-ratio: auto;
   border-radius: 3px;
   box-shadow:
-    2px 3px 5px -2px rgb(0 0 0 / 14%),
-    6px 14px 26px -12px rgb(0 0 0 / 26%);
+    -3px 4px 4px -3px rgb(0 0 0 / 20%),
+    -16px 20px 10px -8px rgb(0 0 0 / 22%),
+    -30px 38px 44px -20px rgb(0 0 0 / 26%);
   transition: box-shadow 0.7s var(--ease);
 }
 
-/* 아직 안 낸 사람의 칸 — 빈 인화지처럼 조용히, 그림자도 한 겹 얕게 */
+/* 아직 안 낸 사람의 칸 — 빈 인화지처럼 조용히, 같은 방향으로 옅게 */
 .frame-cell.empty :deep(.poster) {
   background: color-mix(in srgb, var(--fg) 4%, var(--page));
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--fg) 7%, transparent),
-    2px 3px 5px -2px rgb(0 0 0 / 8%),
-    5px 10px 18px -10px rgb(0 0 0 / 14%);
+    -3px 4px 4px -3px rgb(0 0 0 / 10%),
+    -12px 15px 9px -8px rgb(0 0 0 / 11%),
+    -24px 30px 36px -20px rgb(0 0 0 / 14%);
 }
 
 /*
- * 얹으면 8px 떠오른다(위의 transform). 그림자도 그만큼만 자란다.
- * 없던 그림자가 갑자기 생기는 게 아니라, 있던 그림자가 조금 길어지는 것이다.
+ * 얹으면 8px 떠오른다(위의 transform). 그림자도 그만큼 더 길어진다.
+ * 없던 그림자가 갑자기 생기는 게 아니라, 있던 그림자가 왼쪽 아래로 늘어나는 것이다.
  */
 .frame-cell:hover :deep(.poster),
 .frame-cell:focus-visible :deep(.poster) {
   box-shadow:
-    3px 5px 8px -3px rgb(0 0 0 / 16%),
-    10px 22px 38px -14px rgb(0 0 0 / 32%);
+    -4px 5px 5px -3px rgb(0 0 0 / 22%),
+    -24px 30px 13px -9px rgb(0 0 0 / 26%),
+    -44px 56px 60px -22px rgb(0 0 0 / 32%);
 }
 
 .frame-cell.empty:hover :deep(.poster) {
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--fg) 7%, transparent),
-    3px 5px 8px -3px rgb(0 0 0 / 10%),
-    8px 18px 30px -12px rgb(0 0 0 / 18%);
+    -4px 5px 5px -3px rgb(0 0 0 / 12%),
+    -18px 23px 12px -9px rgb(0 0 0 / 14%),
+    -34px 44px 48px -22px rgb(0 0 0 / 18%);
 }
 
 /* 어두운 화면에서는 검은 그늘이 묻히므로 더 진하게 떨군다 */
 @media (prefers-color-scheme: dark) {
   .frame-cell :deep(.poster) {
     box-shadow:
-      2px 3px 6px -2px rgb(0 0 0 / 45%),
-      7px 16px 30px -12px rgb(0 0 0 / 60%);
+      -3px 4px 5px -3px rgb(0 0 0 / 50%),
+      -16px 20px 11px -8px rgb(0 0 0 / 52%),
+      -32px 40px 48px -20px rgb(0 0 0 / 60%);
   }
 
   .frame-cell:hover :deep(.poster),
   .frame-cell:focus-visible :deep(.poster) {
     box-shadow:
-      3px 6px 10px -3px rgb(0 0 0 / 50%),
-      11px 24px 44px -14px rgb(0 0 0 / 70%);
+      -4px 5px 6px -3px rgb(0 0 0 / 55%),
+      -24px 30px 14px -9px rgb(0 0 0 / 60%),
+      -46px 58px 64px -22px rgb(0 0 0 / 70%);
   }
 }
 

@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, reactive, ref, watch } from 'vue'
 
-import { postApi } from '@/api/postApi.js'
+import { postApi } from '@/members/gayeon/api/postApi.js'
 
 const props = defineProps({
   refreshKey: {

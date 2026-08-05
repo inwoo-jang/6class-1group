@@ -1,5 +1,5 @@
 <script setup>
-import { useConfigStore } from '@/stores/configStore'
+import { useConfigStore } from '@/members/gayeon/stores/configStore'
 
 const configStore = useConfigStore()
 </script>

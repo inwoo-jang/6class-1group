@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { fetchFestivalsByArea, sortFestivals } from '@/components/exercise/festivalService'
-import FestivalList from '@/components/exercise/FestivalList.vue'
+import { fetchFestivalsByArea, sortFestivals } from '@/members/gayeon/components/exercise/festivalService'
+import FestivalList from '@/members/gayeon/components/exercise/FestivalList.vue'
 
 const cities = [
   { id: 'city_01', name: '서울', tourAreaCode: '1' },
