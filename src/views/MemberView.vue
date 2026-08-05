@@ -108,6 +108,42 @@ watch(
   min-width: 0;
 }
 
+/*
+ * 결과물이 지면 위에 한 겹 떠 있어 보이게 한다.
+ *
+ * 쓸 수 있는 속성이 제한된다 — 팀원 코드에 position: fixed 와 sticky 가 있어서
+ * transform · filter · clip-path · overflow:hidden 을 여기 걸면 그것들이 깨진다.
+ * (앞의 셋은 fixed 의 기준을 이 요소로 바꿔 버리고, overflow 는 sticky 를 죽인다)
+ * 그래서 배치에 전혀 영향이 없는 box-shadow 와 배경만 쓴다.
+ *
+ * 그림자는 네 겹이다 — 테두리 선, 닿는 그늘, 가까운 그늘, 멀리 퍼지는 그늘.
+ * 한 겹만 쓰면 스티커처럼 납작해 보인다.
+ *
+ * 모서리는 일부러 둥글리지 않는다. 결과물마다 배경을 그리는 방식이 달라서
+ * (어떤 것은 안에서 잘라 내고 어떤 것은 그대로 그린다) 둥글리면 사람마다
+ * 모서리가 제각각이 된다. 잘라 내려면 overflow 나 clip-path 가 필요한데
+ * 그것들은 팀원 코드의 sticky · fixed 를 깨뜨린다.
+ */
+.member:not(.preview) .stage {
+  background: var(--card);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--fg) 8%, transparent),
+    0 2px 4px color-mix(in srgb, var(--fg) 6%, transparent),
+    0 14px 30px -10px color-mix(in srgb, var(--fg) 18%, transparent),
+    0 40px 80px -30px color-mix(in srgb, var(--fg) 24%, transparent);
+}
+
+/* 어두운 화면에서는 그늘이 안 보이므로, 위쪽에 옅은 빛을 얹어 경계를 만든다 */
+@media (prefers-color-scheme: dark) {
+  .member:not(.preview) .stage {
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent),
+      0 0 0 1px color-mix(in srgb, #fff 6%, transparent),
+      0 14px 30px -12px #0009,
+      0 40px 80px -30px #000c;
+  }
+}
+
 .waiting {
   display: grid;
   flex: 1;
@@ -116,6 +152,9 @@ watch(
   padding: clamp(60px, 16vh, 140px) 24px;
   border-radius: var(--radius);
   background: var(--card);
+  box-shadow:
+    0 2px 4px color-mix(in srgb, var(--fg) 5%, transparent),
+    0 12px 28px -10px color-mix(in srgb, var(--fg) 16%, transparent);
   justify-items: center;
   text-align: center;
 }
