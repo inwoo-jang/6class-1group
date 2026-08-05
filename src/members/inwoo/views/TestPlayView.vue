@@ -263,10 +263,10 @@ const saveResult = async () => {
             :disabled="isSaving"
             @click="saveResult"
           >
-            <span aria-hidden="true">💾</span> {{ isSaving ? '저장 중…' : '기록에 저장' }}
+            <span aria-hidden="true">💾</span> {{ isSaving ? '저장 중…' : 'My 에 저장' }}
           </button>
           <RouterLink v-else-if="savedRecordId" class="saved" :to="link('records')">
-            저장 완료 · 내 기록 보기 →
+            저장 완료 · My 에서 보기 →
           </RouterLink>
           <RouterLink v-else class="saved ghost" :to="link('login')">
             로그인하고 저장하기

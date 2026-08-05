@@ -331,7 +331,7 @@ const drawAgain = () => {
         <template v-else-if="savedRecordId">
           <p class="save-hint done">
             기록했습니다.
-            <RouterLink :to="link('records')">내 기록에서 보기 →</RouterLink>
+            <RouterLink :to="link('records')">My 에서 보기 →</RouterLink>
           </p>
         </template>
 
@@ -414,30 +414,71 @@ const drawAgain = () => {
  * 사이트 토큰을 건드리지 않도록 여기서만 변수를 새로 정의한다.
  */
 .tarot-page {
-  --mystic: #6b4fa1;
-  --mystic-soft: color-mix(in srgb, var(--mystic) 12%, transparent);
-  --mystic-line: color-mix(in srgb, var(--mystic) 32%, transparent);
-  --gold: #b58b3c;
+  /*
+   * 해질녘 색조.
+   * 원색 보라(#6b4fa1)는 채도가 높아 화면이 소란스러웠다.
+   * 회보라로 낮추고, 짝이 되는 남빛과 노을빛을 두어 단색 대신 흐름을 만든다.
+   */
+  --mystic: #6a5c8a;
+  --mystic-deep: #453a5e;
+  --mystic-dusk: #7a86ab;
+  --mystic-glow: #c9a68a;
+  --mystic-soft: color-mix(in srgb, var(--mystic) 11%, transparent);
+  --mystic-line: color-mix(in srgb, var(--mystic) 26%, transparent);
+  --gold: #ac8b52;
 
   display: grid;
   gap: 12px;
 }
-.tarot-intro, .spread, .reading, .tarot-deck { border: 1px solid color-mix(in srgb, var(--surface) 75%, transparent); border-radius: 22px; background: color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter: blur(12px); }
-.tarot-intro { padding: 28px; }
+.tarot-intro, .spread, .reading, .tarot-deck { border: 0; border-radius: 22px; box-shadow: 0 1px 2px rgb(30 26 40 / 0.04), 0 10px 30px rgb(30 26 40 / 0.05); background: color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter: blur(12px); }
+/* 머리말에만 아주 옅은 노을을 깐다. 이 화면이 다른 화면과 다른 시간대에 있다는 표시 */
+.tarot-intro {
+  padding: 28px;
+  background:
+    radial-gradient(120% 90% at 12% 0%, color-mix(in srgb, var(--mystic-dusk) 16%, transparent), transparent 62%),
+    radial-gradient(90% 70% at 95% 8%, color-mix(in srgb, var(--mystic-glow) 15%, transparent), transparent 60%),
+    color-mix(in srgb, var(--surface) 84%, transparent);
+}
 .tarot-eyebrow, .tarot-kind { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px; color: var(--mystic); font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; }
 h1, h2 { margin: 0; color: var(--ink); font-weight: 600; }
 h1 { font-size: 34px; line-height: 1.15; }
 h2 { font-size: 24px; line-height: 1.25; }
-.tarot-intro p { margin: 12px 0 0; color: var(--ink-soft); line-height: 1.65; }
-.tarot-cta { display: inline-block; margin-top: 14px !important; padding: 10px 16px; border-radius: 12px; background: var(--mystic-soft); color: var(--ink-soft); font-size: 13px; }
+.tarot-intro p { margin: 12px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.65; }
+/*
+ * "지금 무엇을 하면 되는지" 한 줄. 이 화면에서 가장 중요한 안내라
+ * 날짜 줄보다 크고 진하게 두고, 옅은 띠로 감싸 눈이 먼저 닿게 한다.
+ */
+.tarot-cta {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  margin-top: 18px !important;
+  padding: 13px 16px;
+  border-radius: 14px;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--mystic-dusk) 15%, transparent), color-mix(in srgb, var(--mystic-glow) 12%, transparent));
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+/* 앞에 작은 점 하나 — 읽어야 할 줄이라는 표시 */
+.tarot-cta::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mystic);
+}
 .tarot-cta b { color: var(--mystic); }
 
 /* ── 세 자리 ── */
 .spread { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; padding: 18px 20px; }
 .slot { position: relative; display: grid; gap: 8px; align-content: start; }
 .slot-label { display: flex; gap: 6px; align-items: center; margin: 0; color: var(--faint); font-family: var(--font-mono); font-size: 11px; }
-.slot-label b { display: grid; width: 18px; height: 18px; place-items: center; border-radius: 50%; color: var(--on-accent); background: var(--line-strong); font-size: 10.5px; }
-.slot.filled .slot-label b, .slot.active .slot-label b { background: var(--mystic); }
+.slot-label b { display: grid; width: 18px; height: 18px; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--muted); background: transparent; font-size: 10px; font-weight: 600; }
+.slot.active .slot-label b, .slot.filled .slot-label b { border-color: var(--mystic-line); color: var(--mystic); }
 /* 자리 카드는 작게 — 이게 크면 아래 '카드 뽑는 곳'이 화면 밖으로 밀려난다 */
 .slot-frame { position: relative; width: 100%; max-width: 132px; margin: 0 auto; aspect-ratio: 1144 / 1919; overflow: hidden; border-radius: 12px; box-shadow: 0 8px 18px #17132528; transition: transform .3s ease; }
 /* 빈 자리를 덮는 투명 버튼 — 누르면 덱으로 내려간다 */
@@ -477,7 +518,8 @@ h2 { font-size: 24px; line-height: 1.25; }
 .para-card em.up { background: var(--mystic-soft); color: var(--mystic); }
 .para-card em.rev { background: color-mix(in srgb, var(--gold) 16%, transparent); color: var(--gold); }
 .para-body { margin: 0; }
-.reading-closing { margin: 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+/* 맺음말은 선 대신 옅은 띠 위에 앉힌다 — 선은 잘라내고, 띠는 감싼다 */
+.reading-closing { margin: 4px 0 0; padding: 13px 16px; border-radius: 14px; background: linear-gradient(100deg, color-mix(in srgb, var(--mystic-dusk) 12%, transparent), color-mix(in srgb, var(--mystic-glow) 12%, transparent)); color: var(--ink-soft); font-size: 13px; line-height: 1.7; }
 @keyframes pulse { 50% { opacity: .25; } }
 
 /* ── 카드 고르기 ── */
@@ -528,15 +570,25 @@ h2 { font-size: 24px; line-height: 1.25; }
  * 아래에 실선을 그어 "여기서 고른 것이 아래 내용"임을 보인다.
  * 세 칸은 아래 .spread 와 같은 3등분이라 세로선이 맞아떨어진다.
  */
-.kind-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: -28px -28px 20px; padding: 10px 10px 12px; border-bottom: 1px solid var(--line); }
-.kind-tabs button { display: grid; gap: 2px; padding: 11px 16px; border: 1px solid transparent; border-radius: 12px; background: transparent; color: var(--muted); cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 700; text-align: left; transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease; }
+/*
+ * 탭 줄과 본문 사이에만 선 하나를 남긴다.
+ * 이 선이 없으면 탭이 그냥 굵은 글씨처럼 보여 눌러야 하는 줄 모른다.
+ * 대신 아주 옅게 — 칸을 나누는 선이 아니라 층을 나누는 선이다.
+ */
+.kind-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: -28px -28px 18px; padding: 10px 10px 0; border-bottom: 1px solid color-mix(in srgb, var(--mystic) 16%, transparent); }
+/* 고른 탭은 그 선 위에 얹혀 선을 살짝 덮는다 — 탭처럼 보이는 핵심 */
+.kind-tabs button { position: relative; margin-bottom: -1px; }
+.kind-tabs button { display: grid; gap: 2px; padding: 11px 16px; border: 0; border-radius: 14px; background: transparent; color: var(--muted); cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 700; text-align: left; transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease; }
 .kind-tabs button small { color: var(--faint); font-size: 11px; font-weight: 500; }
-.kind-tabs button:hover { border-color: var(--mystic-line, var(--line)); color: var(--mystic); }
-.kind-tabs button.on { border-color: var(--mystic); background: var(--mystic); color: var(--on-accent); }
-.kind-tabs button.on small { color: inherit; opacity: 0.75; }
+.kind-tabs button:hover { background: color-mix(in srgb, var(--mystic) 7%, transparent); color: var(--mystic); }
+
+/* 고른 탭 — 원색으로 채우지 않고 옅은 색을 깔아 '지금 여기'만 알린다 */
+.kind-tabs button.on { border-radius: 14px 14px 0 0; background: linear-gradient(180deg, color-mix(in srgb, var(--mystic) 20%, transparent), color-mix(in srgb, var(--mystic) 6%, transparent)); color: var(--mystic-deep); box-shadow: inset 0 -2px 0 var(--mystic); }
+.kind-tabs button.on small { color: var(--mystic); }
+
 
 /* ── 기록 남기기 ── */
-.save-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--mystic-line, var(--line)); }
+.save-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 18px; }
 .save-hint { margin: 0; color: var(--muted); font-size: 12.5px; }
 .save-hint.done { color: var(--mystic); font-weight: 600; }
 .save-hint a { color: var(--mystic); font-weight: 600; }

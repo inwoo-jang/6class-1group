@@ -10,7 +10,7 @@ import { findTest } from '../data/personalityTests'
 import { link } from '../routes'
 
 /**
- * 기록 — /final/records
+ * My — /final/records
  *
  * 운세와 심리테스트를 한 곳에 모아 둔다.
  *   조회  GET    /api/fortune-records        (?kind=tarot|test)
@@ -110,7 +110,7 @@ onMounted(() => store.load())
     <div class="records">
       <header class="head">
         <div>
-          <h3>기록</h3>
+          <h3>My</h3>
           <p class="lead">
             <b>{{ displayName }}</b>님이 남긴 운세와 테스트 <b>{{ count }}</b>건
           </p>

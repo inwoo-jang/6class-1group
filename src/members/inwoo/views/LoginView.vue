@@ -122,9 +122,8 @@ onMounted(async () => {
         <p v-if="errorMessage" class="notice error">{{ errorMessage }}</p>
 
         <el-button
-          type="primary"
           size="large"
-          class="submit"
+          class="submit glass-cta"
           :loading="isLoading"
           :disabled="!canSubmit"
           native-type="submit"

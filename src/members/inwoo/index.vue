@@ -71,7 +71,7 @@ const logout = () => {
         <RouterLink :to="link('weather')" :class="{ on: isWeather }">날씨</RouterLink>
         <RouterLink :to="link('tarot')" :class="{ on: isTarot }">운세</RouterLink>
         <RouterLink :to="link('tests')" :class="{ on: isTests }">테스트</RouterLink>
-        <RouterLink :to="link('records')" :class="{ on: isRecords }">기록</RouterLink>
+        <RouterLink :to="link('records')" :class="{ on: isRecords }">My</RouterLink>
 
         <code class="url">{{ route.path }}</code>
 
@@ -80,7 +80,7 @@ const logout = () => {
           <b>{{ displayName }}</b>
           <button type="button" @click="logout">로그아웃</button>
         </span>
-        <RouterLink v-else :to="link('login')" class="sign" :class="{ on: isLogin }">
+        <RouterLink v-else :to="link('login')" class="sign tint-cta" :class="{ on: isLogin }">
           로그인
         </RouterLink>
       </nav>
@@ -319,7 +319,8 @@ const logout = () => {
   color: var(--ink);
 }
 
-.nav a.on {
+/* 채워 넣는 것은 '어디에 있는지'를 알리는 섹션 탭뿐. 로그인은 따로 둔다 */
+.nav a.on:not(.sign) {
   color: var(--on-accent);
   background: var(--accent);
 }
@@ -365,31 +366,65 @@ const logout = () => {
 }
 
 /*
- * 로그인은 '어디에 있는지'가 아니라 '할 일'이라, 홈·날씨·운세처럼 꽉 채우지 않는다.
- * 테두리만 두른 채 옆의 로그아웃 버튼과 같은 모양을 쓴다.
- *
- * .on 까지 함께 적어 두는 이유 —
- * 로그인 화면에 서 있으면 위의 .nav a.on 이 배경을 초록으로 칠한다.
- * 여기서 글자색만 바꾸면 초록 글자에 초록 배경이 되어 글자가 사라진다.
- * (실제로 그렇게 만들어 메뉴에 구멍이 뚫린 것처럼 보였다.)
- * 그래서 배경·글자색을 한 벌로 같이 정한다.
+ * 로그인은 늘 떠 있는 자리라 조용해야 한다.
+ * 강조색은 섹션 탭이 쓰고 있으므로 여기는 청회색으로 물러난다.
+ * (개인 저장소의 main.css .tint-cta 와 같은 값 — 여기서는 내 영역에만 심는다)
  */
-.nav a.sign,
-.nav a.sign.on {
-  border: 1px solid var(--accent-line);
-  background: var(--surface);
-  color: var(--accent);
-}
-
-/* 지금 로그인 화면에 있다는 표시는 옅은 배경으로만 준다 */
-.nav a.sign.on {
-  background: var(--accent-tint);
+.nav a.sign {
+  padding: 8px 18px;
+  border: 1px solid color-mix(in srgb, var(--slate) 26%, transparent);
+  background: color-mix(in srgb, var(--slate) 11%, transparent);
+  backdrop-filter: blur(8px);
+  color: var(--slate);
+  font-weight: 700;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
 }
 
 .nav a.sign:hover {
-  border-color: var(--accent);
-  background: var(--accent-tint);
-  color: var(--accent);
+  border-color: color-mix(in srgb, var(--slate) 44%, transparent);
+  background: color-mix(in srgb, var(--slate) 20%, transparent);
+  color: var(--slate-deep);
+}
+
+.nav a.sign.on {
+  transform: translateY(1px);
+}
+
+/*
+ * 로그인 화면의 '로그인' 버튼 — 기대되는 행동이라 유리처럼 비치게 한다.
+ * 자식 컴포넌트 안의 요소라 :deep() 으로 닿는다. 내 영역(.final) 안에만 걸린다.
+ */
+.final :deep(.glass-cta) {
+  border: 1px solid rgb(255 255 255 / 0.5);
+  background: linear-gradient(
+    110deg,
+    rgb(122 132 138 / 0.42) 0%,
+    rgb(74 132 108 / 0.42) 38%,
+    rgb(96 148 176 / 0.44) 72%,
+    rgb(150 166 176 / 0.4) 100%
+  );
+  backdrop-filter: blur(8px) saturate(1.25);
+  color: #fff;
+  font-weight: 700;
+  text-shadow: 0 1px 6px rgb(20 30 34 / 0.45);
+  box-shadow: 0 8px 22px rgb(60 90 90 / 0.22), inset 0 1px 0 rgb(255 255 255 / 0.4);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+/* 눌리기 직전에는 옅어지는 게 아니라 짙어져야 한다 */
+.final :deep(.glass-cta:hover),
+.final :deep(.glass-cta:focus),
+.final :deep(.glass-cta:active) {
+  background: linear-gradient(
+    110deg,
+    rgb(92 102 108 / 0.68) 0%,
+    rgb(46 104 80 / 0.7) 38%,
+    rgb(62 116 146 / 0.72) 72%,
+    rgb(112 130 142 / 0.68) 100%
+  );
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgb(40 70 70 / 0.32), inset 0 1px 0 rgb(255 255 255 / 0.4);
 }
 
 @media (max-width: 620px) {
