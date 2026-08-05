@@ -1,0 +1,1 @@
+var e=e=>{if(!Number.isFinite(e)||e<=1)return 0;let t=globalThis.crypto;if(!t?.getRandomValues)return Math.floor(Math.random()*e);let n=Math.floor(4294967296/e)*e,r=new Uint32Array(1);do t.getRandomValues(r);while(r[0]>=n);return r[0]%e},t=t=>{let n=[...t];for(let t=n.length-1;t>0;--t){let r=e(t+1);[n[t],n[r]]=[n[r],n[t]]}return n};export{t as n,e as t};
