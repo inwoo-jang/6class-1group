@@ -19,7 +19,7 @@ export default defineConfig(({ command }) => ({
      * 서버는 `npm run api` 로 따로 띄운다.
      */
     proxy: {
-      '^/api/dongyeol(?:/|$)': {
+      '^/api/(dongyeol|gayeon)(?:/|$)': {
         target: 'http://localhost:3001',
         changeOrigin: true,
       },

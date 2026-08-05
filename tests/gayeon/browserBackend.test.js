@@ -103,8 +103,8 @@ test('없는 것을 찾거나 이름 없이 등록하면 화면이 읽을 수 �
   assert.equal((await productApi.getAll()).length, 5)
 })
 
-test('창구는 배포본에서 브라우저 백엔드로, localhost 에서는 진짜 서버로 간다', async () => {
-  // location 이 없는 이 자리는 배포본과 같은 취급 — 어댑터가 끼워져 있어야 한다
+test('창구는 자기 이름표 아래로만 나간다', () => {
+  // /api 로 그냥 나가면 /health · /reset 이 인우의 운세 API 와 겹친다
+  assert.equal(http.defaults.baseURL, '/api/gayeon')
   assert.equal(typeof http.defaults.adapter, 'function')
-  assert.equal(http.defaults.baseURL, 'http://localhost:3001/api')
 })
