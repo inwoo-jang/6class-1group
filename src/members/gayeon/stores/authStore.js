@@ -11,7 +11,7 @@ const loadAuth = () => {
   }
 }
 
-export const useAuthStore = defineStore('auth', {
+export const useAuthStore = defineStore('gayeon-auth', {
   state: () => loadAuth(),
   actions: {
     login(userName) {
