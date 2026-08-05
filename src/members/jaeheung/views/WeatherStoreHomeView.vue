@@ -317,15 +317,17 @@ const handleAddCity = async (result) => {
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  /* 대시보드와 까치 둥지를 나란히 붙여 두고, 그 묶음을 화면 한가운데에 놓는다.
+     예전에는 둥지를 화면 오른쪽 끝에 고정해 두고 그만큼 padding 으로 비웠는데,
+     그러면 대시보드가 왼쪽으로 밀려 보였다. */
+  gap: 20px;
   width: 100%;
-  /* 우측 상단에 고정된(floating) 까치 둥지(260px + 여백)와 겹치지 않도록 공간을 남겨두고
-     그 안에서 가운데 정렬한다 */
-  padding-right: 300px;
   box-sizing: border-box;
 }
 @media (max-width: 1000px) {
   .page-layout {
-    padding-right: 0;
+    flex-direction: column;
+    align-items: center;
   }
 }
 
